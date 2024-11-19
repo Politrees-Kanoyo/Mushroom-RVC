@@ -11,7 +11,7 @@ pedalboard
 edge-tts
 einops
 local-attention
-gradio==5.0.0
+gradio==5.5.0
 mega.py
 wget
 gdown
