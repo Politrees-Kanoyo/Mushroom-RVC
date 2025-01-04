@@ -3,10 +3,10 @@ name: Линтер кода
 on:
   push:
     branches:
-      - dev/PolGen-Lite
+      - PolGen
   pull_request:
     branches:
-      - dev/PolGen-Lite
+      - PolGen
 
 jobs:
   lint:
@@ -23,10 +23,19 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Установка flake8
+      - name: Установка зависимостей
         run: |
-          pip install flake8
+          python -m pip install --upgrade pip
+          pip install flake8 pylint vulture
 
       - name: Запуск flake8
         run: flake8 .
+        continue-on-error: true
+
+      - name: Запуск PyLint
+        run: pylint .
+        continue-on-error: true
+
+      - name: Запуск Vulture
+        run: vulture .
         continue-on-error: true
