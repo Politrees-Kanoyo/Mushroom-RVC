@@ -1,7 +1,8 @@
 import math
+from typing import List, Optional
+
 import torch
 from torch.nn import functional as F
-from typing import List, Optional
 
 
 def init_weights(m, mean=0.0, std=0.01):
@@ -22,7 +23,9 @@ def convert_pad_shape(pad_shape):
 
 def kl_divergence(m_p, logs_p, m_q, logs_q):
     kl = (logs_q - logs_p) - 0.5
-    kl += 0.5 * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2)) * torch.exp(-2.0 * logs_q)
+    kl += (
+        0.5 * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2)) * torch.exp(-2.0 * logs_q)
+    )
     return kl
 
 

@@ -1,9 +1,10 @@
+from typing import Optional
+
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.nn.utils.weight_norm import remove_weight_norm
 from torch.nn.utils.parametrizations import weight_norm
-from typing import Optional
+from torch.nn.utils.weight_norm import remove_weight_norm
 
 from .commons import init_weights
 from .residuals import LRELU_SLOPE, ResBlock1, ResBlock2
@@ -121,10 +122,14 @@ class SineGen(nn.Module):
             f0_buf[:, :, 0] = f0[:, :, 0]
             f0_buf[:, :, 1:] = (
                 f0_buf[:, :, 0:1]
-                * torch.arange(2, self.harmonic_num + 2, device=f0.device)[None, None, :]
+                * torch.arange(2, self.harmonic_num + 2, device=f0.device)[
+                    None, None, :
+                ]
             )
             rad_values = (f0_buf / float(self.sample_rate)) % 1
-            rand_ini = torch.rand(f0_buf.shape[0], f0_buf.shape[2], device=f0_buf.device)
+            rand_ini = torch.rand(
+                f0_buf.shape[0], f0_buf.shape[2], device=f0_buf.device
+            )
             rand_ini[:, 0] = 0
             rad_values[:, 0, :] = rad_values[:, 0, :] + rand_ini
             tmp_over_one = torch.cumsum(rad_values, 1)
