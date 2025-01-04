@@ -66,4 +66,4 @@ jobs:
           body: "Автоматическое форматирование кода с помощью black"
           title: "Автоматическое форматирование кода"
           commit-message: "Автоматическое форматирование кода с помощью black"
-          branch: formatter/PolGen-Lite
+          branch: formatter/PolGen
