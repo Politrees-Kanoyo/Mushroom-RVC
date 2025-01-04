@@ -5,13 +5,13 @@ set -e
 title="PolGen"
 echo $title
 
+principal=$(pwd)
+INSTALL_ENV_DIR="$principal/env"
+
 if [ ! -d "env" ]; then
-    principal=$(pwd)
-    CONDA_ROOT_PREFIX="$HOME/miniconda3"
-    INSTALL_ENV_DIR="$principal/env"
+    CONDA_ROOT_PREFIX="$HOME/miniconda3"    
     MINICONDA_DOWNLOAD_URL="https://repo.anaconda.com/miniconda/Miniconda3-py310_24.11.1-0-Linux-x86_64.sh"
     CONDA_EXECUTABLE="$CONDA_ROOT_PREFIX/bin/conda"
-
     if [ ! -f "$CONDA_EXECUTABLE" ]; then
         echo "Miniconda not found. Starting download and installation..."
         echo "Downloading Miniconda..."
