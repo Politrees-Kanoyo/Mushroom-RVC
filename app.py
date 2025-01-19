@@ -9,7 +9,6 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 from tabs.conversion.conversion import conversion_tab
 from tabs.conversion.edge_tts import edge_tts_tab
 from tabs.install.install_models import files_upload, url_download, zip_upload
-from tabs.processing.processing import processing_tab
 from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
@@ -29,12 +28,8 @@ with gr.Blocks(
     with gr.Tab("Велком/Контакты"):
         welcome_tab()
 
-    with gr.Tab("Преобразование и обработка голоса"):
-        with gr.Tab("Замена голоса"):
-            conversion_tab()
-
-        with gr.Tab("Объединение/Обработка"):
-            processing_tab()
+    with gr.Tab("Преобразование голоса (RVC)"):
+        conversion_tab()
 
     with gr.Tab("Преобразование текста в речь (TTS)"):
         edge_tts_tab()
