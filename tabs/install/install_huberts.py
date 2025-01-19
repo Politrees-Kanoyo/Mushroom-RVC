@@ -30,7 +30,7 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
     try:
         authorized_domains = ["huggingface.co"]
         if custom_url:
-            if not re.search(r"\.pt(\?.*)?$", custom_url):
+            if not custom_url.endswith(".pt"):
                 return "Ошибка: URL должен указывать на файл в формате .pt"
             parsed_url = urllib.parse.urlparse(custom_url)
             if parsed_url.netloc not in authorized_domains:
@@ -61,8 +61,7 @@ def toggle_custom_url(checkbox_value):
 def install_hubert_tab():
     with gr.Tab("Установка HuBERT моделей"):
         gr.HTML(
-            "<center><h2>Если вы не меняли HuBERT при тренировке модели, "
-            "то не трогайте этот блок.</h2></center>"
+            "<center><h2>Если вы не меняли HuBERT при тренировке модели, то не трогайте этот блок.</h2></center>"
         )
         with gr.Row(variant="panel"):
             with gr.Column(variant="panel"):
