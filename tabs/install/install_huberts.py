@@ -34,7 +34,7 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
                 return "Ошибка: URL должен указывать на файл в формате .pt"
             parsed_url = urllib.parse.urlparse(custom_url)
             if parsed_url.netloc not in authorized_domains:
-                return "Ошибка: URL должен принадлежать авторизованному домену"
+                return f"Ошибка: URL должен принадлежать авторизованному домену. Доступные домены: {', '.join(authorized_domains)}"
             model_url = custom_url
         else:
             model_url = base_url + model_name
