@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import urllib.request
+import urllib.parse
 
 import gradio as gr
 
@@ -27,9 +28,13 @@ def download_file(url, destination):
 
 def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
     try:
+        authorized_domains = ["huggingface.co"]
         if custom_url:
             if not re.search(r"\.pt(\?.*)?$", custom_url):
                 return "Ошибка: URL должен указывать на файл в формате .pt"
+            parsed_url = urllib.parse.urlparse(custom_url)
+            if parsed_url.netloc not in authorized_domains:
+                return "Ошибка: URL должен принадлежать авторизованному домену"
             model_url = custom_url
         else:
             model_url = base_url + model_name
