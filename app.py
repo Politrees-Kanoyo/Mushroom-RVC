@@ -1,7 +1,10 @@
 import os
 import sys
-
+import logging
 import gradio as gr
+
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 from tabs.conversion.conversion import conversion_tab
 from tabs.conversion.edge_tts import edge_tts_tab
@@ -12,9 +15,8 @@ from tabs.welcome import welcome_tab
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
 
-
 with gr.Blocks(
-    title="PolGen Lite - Politrees",
+    title="PolGen - Politrees",
     theme=gr.themes.Soft(
         primary_hue="green",
         secondary_hue="green",
@@ -67,10 +69,7 @@ if __name__ == "__main__":
             launch(port)
             break
         except OSError:
-            print(
-                f"Не удалось запустить на порту {port}, "
-                "повторите попытку на порту {port - 1}..."
-            )
+            print(f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}...")
             port -= 1
         except Exception as error:
             print(f"Произошла ошибка при запуске Gradio: {error}")
