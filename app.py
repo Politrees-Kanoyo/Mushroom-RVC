@@ -10,7 +10,7 @@ logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 from tabs.conversion import conversion_tab
 from tabs.edge_tts import edge_tts_tab
-from tabs.install import files_upload, url_download, zip_upload, install_hubert_tab, output_message
+from tabs.install import url_zip_download, zip_upload, files_upload, install_hubert_tab, output_message
 from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
@@ -41,7 +41,7 @@ with gr.Blocks(
 
     with gr.Tab("Загрузка моделей"):
         with gr.Tab("Загрузка RVC моделей"):
-            url_download(output_message_component)
+            url_zip_download(output_message_component)
             zip_upload(output_message_component)
             files_upload(output_message_component)
             output_message_component.render()

@@ -69,8 +69,8 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
         return f'Ошибка при установке модели "{model_name}": {str(e)}'
 
 
-def url_download(output_message):
-    with gr.Accordion("Загрузить по ссылке", open=False):
+def url_zip_download(output_message):
+    with gr.Accordion("Загрузить ZIP-файл по ссылке", open=False):
         gr.HTML(
             "<h3>"
             "Поддерживаемые сайты: "
@@ -83,7 +83,7 @@ def url_download(output_message):
         )
         with gr.Column():
             with gr.Group():
-                link = gr.Text(label="Ссылка на загрузку модели")
+                zip_link = gr.Text(label="Ссылка на загрузку ZIP-файла")
                 model_name = gr.Text(
                     label="Имя модели",
                     info="Дайте вашей загружаемой модели уникальное имя, отличное от других голосовых моделей.",
@@ -92,13 +92,13 @@ def url_download(output_message):
 
     download_btn.click(
         download_from_url,
-        inputs=[link, model_name],
+        inputs=[zip_link, model_name],
         outputs=output_message,
     )
 
 
 def zip_upload(output_message):
-    with gr.Accordion("Загрузить ZIP архивом", open=False):
+    with gr.Accordion("Загрузить ZIP-файл", open=False):
         with gr.Column():
             with gr.Group():
                 zip_file = gr.File(
@@ -118,7 +118,7 @@ def zip_upload(output_message):
 
 
 def files_upload(output_message):
-    with gr.Accordion("Загрузить файлами", open=False):
+    with gr.Accordion("Загрузить файлы .pth и .index", open=False):
         with gr.Column():
             with gr.Group():
                 with gr.Row(equal_height=False):
@@ -142,15 +142,14 @@ def files_upload(output_message):
 
 
 def install_hubert_tab():
-    with gr.Tab("Установка HuBERT моделей"):
-        gr.HTML("<center><h3>Не рекомендуется вносить изменения в этот раздел, если вы не проводили обучение RVC модели с использованием пользователькой HuBERT-модели.</h3></center>")
-        with gr.Row(variant="panel", equal_height=True):
-            with gr.Column(variant="panel"):
-                custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
-                custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
-                hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
-            hubert_download_btn = gr.Button("Установить!", variant="primary")
-        hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
+    gr.HTML("<center><h3>Не рекомендуется вносить изменения в этот раздел, если вы не проводили обучение RVC модели с использованием пользователькой HuBERT-модели.</h3></center>")
+    with gr.Row(variant="panel", equal_height=True):
+        with gr.Column(variant="panel"):
+            custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
+            custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
+            hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
+        hubert_download_btn = gr.Button("Установить!", variant="primary")
+    hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
 
     custom_url_checkbox.change(
         toggle_custom_url,
