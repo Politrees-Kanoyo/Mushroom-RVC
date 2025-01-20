@@ -8,13 +8,15 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
-from tabs.conversion.conversion import conversion_tab
-from tabs.conversion.edge_tts import edge_tts_tab
-from tabs.install.install_models import files_upload, url_download, zip_upload
+from tabs.conversion import conversion_tab
+from tabs.edge_tts import edge_tts_tab
+from tabs.install import files_upload, url_download, zip_upload, install_hubert_tab, output_message
 from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
+
+output_message_component = output_message()
 
 with gr.Blocks(
     title="PolGen - Politrees",
@@ -37,10 +39,14 @@ with gr.Blocks(
     with gr.Tab("Преобразование текста в речь (TTS)"):
         edge_tts_tab()
 
-    with gr.Tab("Загрузка модели"):
-        url_download()
-        zip_upload()
-        files_upload()
+    with gr.Tab("Загрузка моделей"):
+        with gr.Tab("Загрузка RVC моделей"):
+            url_download(output_message_component)
+            zip_upload(output_message_component)
+            files_upload(output_message_component)
+            output_message_component.render()
+        with gr.Tab("Загрузка HuBERT моделей"):
+            install_hubert_tab()
 
 
 def launch(port):
