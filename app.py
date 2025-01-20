@@ -3,8 +3,10 @@ import sys
 import logging
 import gradio as gr
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 from tabs.conversion.conversion import conversion_tab
 from tabs.conversion.edge_tts import edge_tts_tab
@@ -16,6 +18,7 @@ MAX_PORT_ATTEMPTS = 10
 
 with gr.Blocks(
     title="PolGen - Politrees",
+    css="footer{display:none !important}",
     theme=gr.themes.Soft(
         primary_hue="green",
         secondary_hue="green",
