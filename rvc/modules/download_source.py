@@ -9,15 +9,17 @@ from mega import Mega
 # Универсальная функция для скачивания файла с разных источников
 def download_file(url, zip_name, progress):
     try:
-        if "drive.google.com" in url:
+        parsed_url = urlparse(url)
+        hostname = parsed_url.hostname
+        if hostname == "drive.google.com":
             download_from_google_drive(url, zip_name, progress)
-        elif "huggingface.co" in url:
+        elif hostname == "huggingface.co":
             download_from_huggingface(url, zip_name, progress)
-        elif "pixeldrain.com" in url:
+        elif hostname == "pixeldrain.com":
             download_from_pixeldrain(url, zip_name, progress)
-        elif "mega.nz" in url:
+        elif hostname == "mega.nz":
             download_from_mega(url, zip_name, progress)
-        elif "disk.yandex.ru" in url or "yadi.sk" in url:
+        elif hostname == "disk.yandex.ru" or hostname == "yadi.sk":
             download_from_yandex(url, zip_name, progress)
         else:
             raise ValueError(
