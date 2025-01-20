@@ -1,4 +1,5 @@
 import urllib.request
+from urllib.parse import urlparse
 
 import gdown
 import gradio as gr
