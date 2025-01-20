@@ -79,7 +79,6 @@ class Synthesizer(nn.Module):
                 upsample_kernel_sizes,
                 gin_channels=gin_channels,
                 sr=sr,
-                is_half=kwargs["is_half"],
             )
         else:
             self.dec = Generator(
