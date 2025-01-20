@@ -20,22 +20,18 @@ models = [
     "japanese_hubert_base.pt",
 ]
 
-
 def download_file(url, destination):
     with urllib.request.urlopen(url) as response, open(destination, "wb") as out_file:
         shutil.copyfileobj(response, out_file)
 
-
 def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
     try:
-        authorized_domains = ["huggingface.co"]
         if custom_url:
-            if not custom_url.endswith(".pt"):
-                return "Ошибка: URL должен указывать на файл в формате .pt"
-            parsed_url = urllib.parse.urlparse(custom_url)
-            if parsed_url.netloc not in authorized_domains:
-                return f"Ошибка: URL должен принадлежать авторизованному домену. Доступные домены: {', '.join(authorized_domains)}"
+            if not custom_url.endswith((".pt", "?download=true")):
+                return "Ошибка: указанный URL не соответствует требованиям. Он должен вести к файлу с расширением .pt или заканчиваться на '?download=true'"
             model_url = custom_url
+            parsed_url = urllib.parse.urlparse(custom_url)
+            model_name = os.path.basename(parsed_url.path)
         else:
             model_url = base_url + model_name
 
@@ -53,31 +49,28 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
     except Exception as e:
         return f'Ошибка при установке модели "{model_name}": {str(e)}'
 
-
 def toggle_custom_url(checkbox_value):
-    return gr.update(visible=checkbox_value), gr.update(visible=not checkbox_value)
-
+    if checkbox_value:
+        return gr.update(visible=True, value=""), gr.update(visible=False, value=None)
+    else:
+        return gr.update(visible=False, value=""), gr.update(visible=True, value="hubert_base.pt")
 
 def install_hubert_tab():
     with gr.Tab("Установка HuBERT моделей"):
-        gr.HTML(
-            "<center><h2>Если вы не меняли HuBERT при тренировке модели, то не трогайте этот блок.</h2></center>"
-        )
-        with gr.Row(variant="panel"):
+        gr.HTML("<center><h3>Не рекомендуется вносить изменения в этот раздел, если вы не проводили обучение RVC модели с использованием пользователькой HuBERT-модели.</h3></center>")
+        with gr.Row(variant="panel", equal_height=True):
             with gr.Column(variant="panel"):
-                custom_url_checkbox = gr.Checkbox(label="Другой HuBERT", value=False)
+                custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
                 custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
-                hubert_model_dropdown = gr.Dropdown(
-                    models, label="HuBERT модели:", visible=True
-                )
-            hubert_download_btn = gr.Button("Скачать", variant="primary")
+                hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
+            hubert_download_btn = gr.Button("Установить!", variant="primary")
         hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
 
-        custom_url_checkbox.change(
-            toggle_custom_url,
-            inputs=custom_url_checkbox,
-            outputs=[custom_url_textbox, hubert_model_dropdown],
-        )
+    custom_url_checkbox.change(
+        toggle_custom_url,
+        inputs=custom_url_checkbox,
+        outputs=[custom_url_textbox, hubert_model_dropdown],
+    )
 
     hubert_download_btn.click(
         download_and_replace_model,
