@@ -1,8 +1,7 @@
 import os
-import re
 import shutil
-import urllib.request
 import urllib.parse
+import urllib.request
 
 import gradio as gr
 
@@ -31,7 +30,9 @@ def toggle_custom_url(checkbox_value):
     if checkbox_value:
         return gr.update(visible=True, value=""), gr.update(visible=False, value=None)
     else:
-        return gr.update(visible=False, value=""), gr.update(visible=True, value="hubert_base.pt")
+        return gr.update(visible=False, value=""), gr.update(
+            visible=True, value="hubert_base.pt"
+        )
 
 
 def output_message():
@@ -142,12 +143,18 @@ def files_upload(output_message):
 
 
 def install_hubert_tab():
-    gr.HTML("<center><h3>Не рекомендуется вносить изменения в этот раздел, если вы не проводили обучение RVC модели с использованием пользователькой HuBERT-модели.</h3></center>")
+    gr.HTML(
+        "<center><h3>Не рекомендуется вносить изменения в этот раздел, если вы не проводили обучение RVC модели с использованием пользователькой HuBERT-модели.</h3></center>"
+    )
     with gr.Row(variant="panel", equal_height=True):
         with gr.Column(variant="panel"):
-            custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
+            custom_url_checkbox = gr.Checkbox(
+                label="Использовать другой HuBERT", value=False
+            )
             custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
-            hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
+            hubert_model_dropdown = gr.Dropdown(
+                models, label="Список доступных HuBERT моделей:", visible=True
+            )
         hubert_download_btn = gr.Button("Установить!", variant="primary")
     hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
 

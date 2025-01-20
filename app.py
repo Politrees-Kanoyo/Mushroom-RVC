@@ -1,16 +1,23 @@
+import logging
 import os
 import sys
-import logging
+
 import gradio as gr
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 from tabs.conversion import conversion_tab
 from tabs.edge_tts import edge_tts_tab
-from tabs.install import url_zip_download, zip_upload, files_upload, install_hubert_tab, output_message
+from tabs.install import (
+    files_upload,
+    install_hubert_tab,
+    output_message,
+    url_zip_download,
+    zip_upload,
+)
 from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
@@ -73,7 +80,9 @@ if __name__ == "__main__":
             launch(port)
             break
         except OSError:
-            print(f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}...")
+            print(
+                f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}..."
+            )
             port -= 1
         except Exception as error:
             print(f"Произошла ошибка при запуске Gradio: {error}")
