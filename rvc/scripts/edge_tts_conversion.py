@@ -77,10 +77,8 @@ def voice_conversion(
     rvc_model_path, rvc_index_path = load_rvc_model(voice_model)
 
     config = Config()
-    hubert_model = load_hubert(config.device, config.is_half, HUBERT_MODEL_PATH)
-    cpt, version, net_g, tgt_sr, vc = get_vc(
-        config.device, config.is_half, config, rvc_model_path
-    )
+    hubert_model = load_hubert(config.device, HUBERT_MODEL_PATH)
+    cpt, version, net_g, tgt_sr, vc = get_vc(config.device, config, rvc_model_path)
 
     rvc_infer(
         rvc_index_path,
