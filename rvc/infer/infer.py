@@ -14,7 +14,6 @@ from .pipeline import VC
 class Config:
     def __init__(self):
         self.device = self.get_device()
-        self.is_half = self.device == "cpu"
         self.n_cpu = cpu_count()
         self.gpu_name = None
         self.gpu_mem = None
@@ -30,19 +29,16 @@ class Config:
 
     def device_config(self):
         if torch.cuda.is_available():
-            print("Используется устройство CUDA")
+            print("Используемое устройство - CUDA")
             self._configure_gpu()
         elif torch.backends.mps.is_available():
-            print("Используется устройство MPS")
+            print("Используемое устройство - MPS")
             self.device = "mps"
         else:
-            print("Используется CPU")
+            print("Используемое устройство - CPU")
             self.device = "cpu"
-            self.is_half = True
 
-        x_pad, x_query, x_center, x_max = (
-            (3, 10, 60, 65) if self.is_half else (1, 6, 38, 41)
-        )
+        x_pad, x_query, x_center, x_max = (1, 6, 38, 41)
         if self.gpu_mem is not None and self.gpu_mem <= 4:
             x_pad, x_query, x_center, x_max = (1, 5, 30, 32)
 
@@ -50,12 +46,6 @@ class Config:
 
     def _configure_gpu(self):
         self.gpu_name = torch.cuda.get_device_name(self.device)
-        low_end_gpus = ["16", "P40", "P10", "1060", "1070", "1080"]
-        if (
-            any(gpu in self.gpu_name for gpu in low_end_gpus)
-            and "V100" not in self.gpu_name.upper()
-        ):
-            self.is_half = False
         self.gpu_mem = int(
             torch.cuda.get_device_properties(self.device).total_memory
             / 1024
@@ -66,24 +56,19 @@ class Config:
 
 
 # Загрузка модели Hubert
-def load_hubert(device, is_half, model_path):
-    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
-        [model_path], suffix=""
-    )
+def load_hubert(device, model_path):
+    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task([model_path], suffix="")
     hubert = models[0].to(device)
-    hubert = hubert.half() if is_half else hubert.float()
+    hubert = hubert.float()
     hubert.eval()
     return hubert
 
 
 # Получение голосового преобразователя
-def get_vc(device, is_half, config, model_path):
+def get_vc(device, config, model_path):
     cpt = torch.load(model_path, map_location="cpu", weights_only=True)
     if "config" not in cpt or "weight" not in cpt:
-        raise ValueError(
-            f"Некорректный формат для {model_path}. "
-            "Используйте голосовую модель, обученную с использованием RVC v2."
-        )
+        raise ValueError(f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную с использованием RVC v2.")
 
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
@@ -91,17 +76,12 @@ def get_vc(device, is_half, config, model_path):
     version = cpt.get("version", "v1")
     input_dim = 768 if version == "v2" else 256
 
-    net_g = Synthesizer(
-        *cpt["config"],
-        use_f0=pitch_guidance,
-        input_dim=input_dim,
-        is_half=is_half,
-    )
+    net_g = Synthesizer(*cpt["config"], use_f0=pitch_guidance, input_dim=input_dim)
 
     del net_g.enc_q
-    print(net_g.load_state_dict(cpt["weight"], strict=False))
-    net_g.eval().to(device)
-    net_g = net_g.half() if is_half else net_g.float()
+    net_g.load_state_dict(cpt["weight"], strict=False)
+    net_g = net_g.to(device).float()
+    net_g.eval()
 
     vc = VC(tgt_sr, config)
     return cpt, version, net_g, tgt_sr, vc
