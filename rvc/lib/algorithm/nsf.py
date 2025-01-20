@@ -20,13 +20,11 @@ class SourceModuleHnNSF(nn.Module):
         sine_amp=0.1,
         add_noise_std=0.003,
         voiced_threshod=0,
-        is_half=True,
     ):
         super(SourceModuleHnNSF, self).__init__()
 
         self.sine_amp = sine_amp
         self.noise_std = add_noise_std
-        self.is_half = is_half
 
         self.l_sin_gen = SineGen(
             sample_rate, harmonic_num, sine_amp, add_noise_std, voiced_threshod
@@ -53,16 +51,13 @@ class GeneratorNSF(nn.Module):
         upsample_kernel_sizes,
         gin_channels,
         sr,
-        is_half=False,
     ):
         super(GeneratorNSF, self).__init__()
 
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
         self.f0_upsamp = nn.Upsample(scale_factor=math.prod(upsample_rates))
-        self.m_source = SourceModuleHnNSF(
-            sample_rate=sr, harmonic_num=0, is_half=is_half
-        )
+        self.m_source = SourceModuleHnNSF(sample_rate=sr, harmonic_num=0)
 
         self.conv_pre = nn.Conv1d(
             initial_channel, upsample_initial_channel, 7, 1, padding=3
