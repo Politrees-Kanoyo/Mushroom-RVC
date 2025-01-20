@@ -14,6 +14,8 @@ from rvc.modules.model_manager import (
 embedders_dir = os.path.join(os.getcwd(), "rvc", "models", "embedders")
 hubert_base_path = os.path.join(embedders_dir, "hubert_base.pt")
 
+authorized_domains = ["huggingface.co"]
+
 base_url = "https://huggingface.co/Politrees/RVC_resources/resolve/main/embedders/"
 
 models = [
@@ -49,8 +51,10 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
         if custom_url:
             if not custom_url.endswith((".pt", "?download=true")):
                 return "Ошибка: указанный URL не соответствует требованиям. Он должен вести к файлу с расширением .pt или заканчиваться на '?download=true'"
-            model_url = custom_url
             parsed_url = urllib.parse.urlparse(custom_url)
+            if parsed_url.netloc not in authorized_domains:
+                return "Ошибка: указанный URL не принадлежит к разрешенным доменам."
+            model_url = custom_url
             model_name = os.path.basename(parsed_url.path)
         else:
             model_url = base_url + model_name
