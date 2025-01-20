@@ -75,7 +75,6 @@ class VC:
         self.x_query = config.x_query
         self.x_center = config.x_center
         self.x_max = config.x_max
-        self.is_half = config.is_half
         self.sample_rate = 16000
         self.window = 160
         self.t_pad = self.sample_rate * self.x_pad
@@ -125,12 +124,8 @@ class VC:
         Получает F0 с использованием модели rmvpe.
         """
         if not hasattr(self, "model_rmvpe"):
-            self.model_rmvpe = RMVPE0Predictor(
-                RMVPE_DIR, is_half=self.is_half, device=self.device
-            )
-        f0 = self.model_rmvpe.infer_from_audio_with_pitch(
-            x, thred=0.03, f0_min=f0_min, f0_max=f0_max
-        )
+            self.model_rmvpe = RMVPE0Predictor(RMVPE_DIR, device=self.device)
+        f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         return f0
 
     def get_f0(
@@ -225,8 +220,7 @@ class VC:
         """
         Преобразует аудио с использованием модели.
         """
-        feats = torch.from_numpy(audio0)
-        feats = feats.half() if self.is_half else feats.float()
+        feats = torch.from_numpy(audio0).float()
         if feats.dim() == 2:
             feats = feats.mean(-1)
         assert feats.dim() == 1, feats.dim()
@@ -246,12 +240,10 @@ class VC:
             feats0 = feats.clone()
         if index is not None and big_npy is not None and index_rate != 0:
             npy = feats[0].cpu().numpy()
-            npy = npy.astype("float32") if self.is_half else npy
             score, ix = index.search(npy, k=8)
             weight = np.square(1 / score)
             weight /= weight.sum(axis=1, keepdims=True)
             npy = np.sum(big_npy[ix] * np.expand_dims(weight, axis=2), axis=1)
-            npy = npy.astype("float16") if self.is_half else npy
             feats = (
                 torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate
                 + (1 - index_rate) * feats
