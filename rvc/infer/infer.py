@@ -57,7 +57,9 @@ class Config:
 
 # Загрузка модели Hubert
 def load_hubert(device, model_path):
-    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task([model_path], suffix="")
+    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
+        [model_path], suffix=""
+    )
     hubert = models[0].to(device)
     hubert = hubert.float()
     hubert.eval()
@@ -68,7 +70,9 @@ def load_hubert(device, model_path):
 def get_vc(device, config, model_path):
     cpt = torch.load(model_path, map_location="cpu", weights_only=True)
     if "config" not in cpt or "weight" not in cpt:
-        raise ValueError(f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную с использованием RVC v2.")
+        raise ValueError(
+            f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную с использованием RVC v2."
+        )
 
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
