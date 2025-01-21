@@ -10,11 +10,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
 from tabs.conversion import conversion_tab
-from tabs.install import (
-    files_upload,
-    output_message,
-    zip_upload,
-)
+from tabs.install import files_upload, output_message, zip_upload
 from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000

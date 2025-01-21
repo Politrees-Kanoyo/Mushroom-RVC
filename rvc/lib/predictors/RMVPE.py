@@ -1,10 +1,10 @@
+from typing import List
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-
 from librosa.filters import mel
-from typing import List
 
 N_MELS = 128
 N_CLASS = 360
@@ -65,12 +65,7 @@ class ConvBlockRes(nn.Module):
 
 class ResEncoderBlock(nn.Module):
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        n_blocks=1,
-        momentum=0.01
+        self, in_channels, out_channels, kernel_size, n_blocks=1, momentum=0.01
     ):
         super(ResEncoderBlock, self).__init__()
         self.n_blocks = n_blocks
@@ -108,7 +103,11 @@ class Encoder(nn.Module):
         self.layers = nn.ModuleList()
         self.latent_channels = []
         for i in range(self.n_encoders):
-            self.layers.append(ResEncoderBlock(in_channels, out_channels, kernel_size, n_blocks, momentum=momentum))
+            self.layers.append(
+                ResEncoderBlock(
+                    in_channels, out_channels, kernel_size, n_blocks, momentum=momentum
+                )
+            )
             self.latent_channels.append([out_channels, in_size])
             in_channels = out_channels
             out_channels *= 2
@@ -130,9 +129,13 @@ class Intermediate(nn.Module):
         super(Intermediate, self).__init__()
         self.n_inters = n_inters
         self.layers = nn.ModuleList()
-        self.layers.append(ResEncoderBlock(in_channels, out_channels, None, n_blocks, momentum))
+        self.layers.append(
+            ResEncoderBlock(in_channels, out_channels, None, n_blocks, momentum)
+        )
         for _ in range(self.n_inters - 1):
-            self.layers.append(ResEncoderBlock(out_channels, out_channels, None, n_blocks, momentum))
+            self.layers.append(
+                ResEncoderBlock(out_channels, out_channels, None, n_blocks, momentum)
+            )
 
     def forward(self, x):
         for i in range(self.n_inters):
@@ -178,7 +181,9 @@ class Decoder(nn.Module):
         self.n_decoders = n_decoders
         for _ in range(self.n_decoders):
             out_channels = in_channels // 2
-            self.layers.append(ResDecoderBlock(in_channels, out_channels, stride, n_blocks, momentum))
+            self.layers.append(
+                ResDecoderBlock(in_channels, out_channels, stride, n_blocks, momentum)
+            )
             in_channels = out_channels
 
     def forward(self, x, concat_tensors):
@@ -198,14 +203,18 @@ class DeepUnet(nn.Module):
         en_out_channels=16,
     ):
         super(DeepUnet, self).__init__()
-        self.encoder = Encoder(in_channels, 128, en_de_layers, kernel_size, n_blocks, en_out_channels)
+        self.encoder = Encoder(
+            in_channels, 128, en_de_layers, kernel_size, n_blocks, en_out_channels
+        )
         self.intermediate = Intermediate(
             self.encoder.out_channel // 2,
             self.encoder.out_channel,
             inter_layers,
             n_blocks,
         )
-        self.decoder = Decoder(self.encoder.out_channel, en_de_layers, kernel_size, n_blocks)
+        self.decoder = Decoder(
+            self.encoder.out_channel, en_de_layers, kernel_size, n_blocks
+        )
 
     def forward(self, x):
         x, concat_tensors = self.encoder(x)
@@ -243,7 +252,9 @@ class E2E(nn.Module):
                 nn.Sigmoid(),
             )
         else:
-            self.fc = nn.Sequential(nn.Linear(3 * N_MELS, N_CLASS), nn.Dropout(0.25), nn.Sigmoid())
+            self.fc = nn.Sequential(
+                nn.Linear(3 * N_MELS, N_CLASS), nn.Dropout(0.25), nn.Sigmoid()
+            )
 
     def forward(self, mel):
         mel = mel.transpose(-1, -2).unsqueeze(1)
@@ -291,7 +302,9 @@ class MelSpectrogram(torch.nn.Module):
         hop_length_new = int(np.round(self.hop_length * speed))
         keyshift_key = str(keyshift) + "_" + str(audio.device)
         if keyshift_key not in self.hann_window:
-            self.hann_window[keyshift_key] = torch.hann_window(win_length_new).to(audio.device)
+            self.hann_window[keyshift_key] = torch.hann_window(win_length_new).to(
+                audio.device
+            )
         fft = torch.stft(
             audio,
             n_fft=n_fft_new,
@@ -324,7 +337,9 @@ class RMVPE0Predictor:
         self.model = model
         self.resample_kernel = {}
         self.device = device
-        self.mel_extractor = MelSpectrogram(N_MELS, 16000, 1024, 160, None, 30, 8000).to(device)
+        self.mel_extractor = MelSpectrogram(
+            N_MELS, 16000, 1024, 160, None, 30, 8000
+        ).to(device)
         self.model = self.model.to(device)
         cents_mapping = 20 * np.arange(N_CLASS) + 1997.3794084376191
         self.cents_mapping = np.pad(cents_mapping, (4, 4))
@@ -332,7 +347,9 @@ class RMVPE0Predictor:
     def mel2hidden(self, mel):
         with torch.no_grad():
             n_frames = mel.shape[-1]
-            mel = F.pad(mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
+            mel = F.pad(
+                mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect"
+            )
             hidden = self.model(mel)
             return hidden[:, :n_frames]
 
