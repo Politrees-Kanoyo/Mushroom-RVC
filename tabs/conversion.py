@@ -81,7 +81,7 @@ def conversion_tab():
         )
 
     with gr.Group():
-        with gr.Row(variant="panel"):
+        with gr.Row(variant="panel", equal_height=True):
             generate_btn = gr.Button("Генерировать", variant="primary", scale=2)
             converted_voice = gr.Audio(label="Преобразованный голос", scale=9)
             with gr.Column(min_width=160):
@@ -93,7 +93,7 @@ def conversion_tab():
                     filterable=False,
                 )
 
-    with gr.Tab("Настройки преобразования"):
+    with gr.Accordion("Настройки преобразования", open=False):
         with gr.Accordion("Стандартные настройки", open=False):
             with gr.Group():
                 with gr.Column(variant="panel"):
@@ -159,7 +159,7 @@ def conversion_tab():
                         "но уменьшить эффект индексирования.",
                     )
 
-        with gr.Accordion("Расширенные настройки", open=False):
+        with gr.Accordion("Дополнительные настройки", open=False):
             with gr.Column(variant="panel"):
                 with gr.Row():
                     f0_min = gr.Slider(
