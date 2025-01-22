@@ -9,8 +9,8 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
-from tabs.inference import inference_tab
 from tabs.edge_tts import edge_tts_tab
+from tabs.inference import inference_tab
 from tabs.install import (
     files_upload,
     install_hubert_tab,
