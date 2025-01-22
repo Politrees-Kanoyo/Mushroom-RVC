@@ -4,12 +4,11 @@ import os
 import gradio as gr
 import librosa
 import numpy as np
-from pydub import AudioSegment
 import soundfile as sf
 import torch
+from pydub import AudioSegment
 
 from rvc.infer.infer import Config, get_vc, load_hubert, rvc_infer
-
 
 RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
 HUBERT_MODEL_PATH = os.path.join(
@@ -372,13 +371,23 @@ def inference_tab():
                         )
 
     # Загрузка файлов
-    local_file.input(process_file_upload, inputs=[local_file], outputs=[song_input, local_file])
+    local_file.input(
+        process_file_upload, inputs=[local_file], outputs=[song_input, local_file]
+    )
 
     # Обновление кнопок
-    show_upload_button.click(swap_visibility, outputs=[upload_file, enter_local_file, song_input, local_file])
-    show_enter_button.click(swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file])
-    show_upload_button.click(swap_buttons, outputs=[show_upload_button, show_enter_button])
-    show_enter_button.click(swap_buttons, outputs=[show_enter_button, show_upload_button])
+    show_upload_button.click(
+        swap_visibility, outputs=[upload_file, enter_local_file, song_input, local_file]
+    )
+    show_enter_button.click(
+        swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file]
+    )
+    show_upload_button.click(
+        swap_buttons, outputs=[show_upload_button, show_enter_button]
+    )
+    show_enter_button.click(
+        swap_buttons, outputs=[show_enter_button, show_upload_button]
+    )
 
     # Показать hop_length
     f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)

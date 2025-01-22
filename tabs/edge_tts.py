@@ -12,7 +12,6 @@ from pydub import AudioSegment
 
 from rvc.infer.infer import Config, get_vc, load_hubert, rvc_infer
 
-
 RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
 HUBERT_MODEL_PATH = os.path.join(
     os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt"
@@ -57,6 +56,7 @@ edge_voices = {
     "Шведский": ["sv-SE-HilleviNeural", "sv-SE-MattiasNeural"],
     "Японский": ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"],
 }
+
 
 def update_edge_voices(selected_language):
     voices = edge_voices[selected_language]
