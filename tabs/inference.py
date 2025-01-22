@@ -1,14 +1,12 @@
-import asyncio
 import gc
 import os
 
-import edge_tts
 import gradio as gr
 import librosa
 import numpy as np
+from pydub import AudioSegment
 import soundfile as sf
 import torch
-from pydub import AudioSegment
 
 from rvc.infer.infer import Config, get_vc, load_hubert, rvc_infer
 
@@ -18,49 +16,6 @@ HUBERT_MODEL_PATH = os.path.join(
     os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt"
 )
 OUTPUT_DIR = os.path.join(os.getcwd(), "output")
-
-
-edge_voices = {
-    "Английский (Великобритания)": ["en-GB-SoniaNeural", "en-GB-RyanNeural"],
-    "Английский (США)": ["en-US-JennyNeural", "en-US-GuyNeural"],
-    "Арабский (Египет)": ["ar-EG-SalmaNeural", "ar-EG-ShakirNeural"],
-    "Арабский (Саудовская Аравия)": ["ar-SA-HamedNeural", "ar-SA-ZariyahNeural"],
-    "Бенгальский (Бангладеш)": ["bn-BD-RubaiyatNeural", "bn-BD-KajalNeural"],
-    "Венгерский": ["hu-HU-TamasNeural", "hu-HU-NoemiNeural"],
-    "Вьетнамский": ["vi-VN-HoaiMyNeural", "vi-VN-HuongNeural"],
-    "Греческий": ["el-GR-AthinaNeural", "el-GR-NestorasNeural"],
-    "Датский": ["da-DK-PernilleNeural", "da-DK-MadsNeural"],
-    "Иврит": ["he-IL-AvriNeural", "he-IL-HilaNeural"],
-    "Испанский (Испания)": ["es-ES-ElviraNeural", "es-ES-AlvaroNeural"],
-    "Испанский (Мексика)": ["es-MX-DaliaNeural", "es-MX-JorgeNeural"],
-    "Итальянский": ["it-IT-ElsaNeural", "it-IT-DiegoNeural"],
-    "Китайский (упрощенный)": ["zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"],
-    "Корейский": ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"],
-    "Немецкий": ["de-DE-KatjaNeural", "de-DE-ConradNeural"],
-    "Нидерландский": ["nl-NL-ColetteNeural", "nl-NL-FennaNeural"],
-    "Норвежский": ["nb-NO-PernilleNeural", "nb-NO-FinnNeural"],
-    "Польский": ["pl-PL-MajaNeural", "pl-PL-JacekNeural"],
-    "Португальский (Бразилия)": ["pt-BR-FranciscaNeural", "pt-BR-AntonioNeural"],
-    "Португальский (Португалия)": ["pt-PT-RaquelNeural", "pt-PT-DuarteNeural"],
-    "Румынский": ["ro-RO-EmilNeural", "ro-RO-AndreiNeural"],
-    "Русский": ["ru-RU-SvetlanaNeural", "ru-RU-DmitryNeural"],
-    "Тагальский": ["tl-PH-AngeloNeural", "tl-PH-TessaNeural"],
-    "Тамильский": ["ta-IN-ValluvarNeural", "ta-IN-KannanNeural"],
-    "Тайский": ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"],
-    "Турецкий": ["tr-TR-AhmetNeural", "tr-TR-EmelNeural"],
-    "Украинский": ["uk-UA-OstapNeural", "uk-UA-PolinaNeural"],
-    "Филиппинский": ["fil-PH-AngeloNeural", "fil-PH-TessaNeural"],
-    "Финский": ["fi-FI-NooraNeural", "fi-FI-SelmaNeural"],
-    "Французский (Канада)": ["fr-CA-SylvieNeural", "fr-CA-AntoineNeural"],
-    "Французский (Франция)": ["fr-FR-DeniseNeural", "fr-FR-HenriNeural"],
-    "Чешский": ["cs-CZ-VlastaNeural", "cs-CZ-AntoninNeural"],
-    "Шведский": ["sv-SE-HilleviNeural", "sv-SE-MattiasNeural"],
-    "Японский": ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"],
-}
-
-def update_edge_voices(selected_language):
-    voices = edge_voices[selected_language]
-    return gr.update(choices=voices, value=voices[0] if voices else None)
 
 
 # Отображает прогресс выполнения задачи.
@@ -106,16 +61,10 @@ def convert_audio(input_audio, output_audio, output_format):
     audio.export(output_audio, format=output_format)
 
 
-# Синтезирует текст в речь с использованием edge_tts.
-async def text_to_speech(text, voice, output_path):
-    communicate = edge_tts.Communicate(text=text, voice=voice)
-    await communicate.save(output_path)
-
-
 # Выполняет преобразование голоса с использованием модели RVC.
 def voice_conversion(
     voice_model,
-    input_path,
+    vocals_path,
     output_path,
     pitch,
     f0_method,
@@ -136,7 +85,7 @@ def voice_conversion(
     rvc_infer(
         rvc_index_path,
         index_rate,
-        input_path,
+        vocals_path,
         output_path,
         pitch,
         f0_method,
@@ -159,11 +108,10 @@ def voice_conversion(
     torch.cuda.empty_cache()
 
 
-# Основной конвейер для синтеза речи и преобразования голоса.
-def edge_tts_pipeline(
-    text,
+# Основной конвейер для преобразования голоса.
+def voice_pipeline(
+    input_path,
     voice_model,
-    voice,
     pitch,
     index_rate=0.5,
     filter_radius=3,
@@ -176,27 +124,24 @@ def edge_tts_pipeline(
     f0_max=1100,
     progress=gr.Progress(),
 ):
-    if not text:
-        raise ValueError("Введите необходимый текст в поле для ввода.")
-    if not voice:
-        raise ValueError("Выберите язык и голос для синтеза речи.")
+    if not input_path:
+        raise ValueError(
+            "Не удалось найти аудиофайл. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
+        )
     if not voice_model:
         raise ValueError("Выберите модель голоса для преобразования.")
+    if not os.path.exists(input_path):
+        raise ValueError(f"Файл {input_path} не найден.")
 
     display_progress(0, "[~] Запуск конвейера генерации...", progress)
-    tts_voice_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
-    tts_voice_convert_path = os.path.join(
-        OUTPUT_DIR, f"TTS_Voice_(Converted).{output_format}"
-    )
+    base_name = os.path.splitext(os.path.basename(input_path))[0]
+    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
 
-    display_progress(0.2, "[~] Синтез речи...", progress)
-    asyncio.run(text_to_speech(text, voice, tts_voice_path))
-
-    display_progress(0.4, "[~] Преобразование голоса...", progress)
+    display_progress(0.4, "[~] Преобразование вокала...", progress)
     voice_conversion(
         voice_model,
-        tts_voice_path,
-        tts_voice_convert_path,
+        input_path,
+        output_path,
         pitch,
         f0_method,
         index_rate,
@@ -209,9 +154,9 @@ def edge_tts_pipeline(
     )
 
     display_progress(0.8, "[~] Конвертация аудио в стерео...", progress)
-    convert_audio(tts_voice_path, tts_voice_path, output_format)
+    convert_audio(output_path, output_path, output_format)
 
-    return tts_voice_convert_path, tts_voice_path
+    return output_path
 
 
 def get_folders(models_dir):
@@ -226,6 +171,10 @@ def update_models_list():
     return gr.update(choices=get_folders(RVC_MODELS_DIR))
 
 
+def process_file_upload(file):
+    return file, gr.update(value=file)
+
+
 def show_hop_slider(pitch_detection_algo):
     if pitch_detection_algo in ["mangio-crepe"]:
         return gr.update(visible=True)
@@ -233,9 +182,22 @@ def show_hop_slider(pitch_detection_algo):
         return gr.update(visible=False)
 
 
-def edge_tts_tab():
+def swap_visibility():
+    return (
+        gr.update(visible=True),
+        gr.update(visible=False),
+        gr.update(value=""),
+        gr.update(value=None),
+    )
+
+
+def swap_buttons():
+    return gr.update(visible=False), gr.update(visible=True)
+
+
+def inference_tab():
     with gr.Row():
-        with gr.Column(variant="panel", scale=2):
+        with gr.Column(scale=1, variant="panel"):
             with gr.Group():
                 rvc_model = gr.Dropdown(
                     label="Голосовые модели:",
@@ -262,26 +224,37 @@ def edge_tts_tab():
                     interactive=True,
                     visible=True,
                 )
-        with gr.Column(variant="panel", scale=2):
-            with gr.Group():
-                language = gr.Dropdown(
-                    label="Язык",
-                    choices=list(edge_voices.keys()),
-                    interactive=True,
-                    visible=True,
-                )
-                voice = gr.Dropdown(
-                    value="en-GB-SoniaNeural",
-                    label="Голос",
-                    choices=["en-GB-SoniaNeural", "en-GB-RyanNeural"],
+
+        with gr.Column(scale=2, variant="panel"):
+            with gr.Column() as upload_file:
+                local_file = gr.Audio(
+                    label="Аудио",
+                    type="filepath",
+                    show_download_button=False,
+                    show_share_button=False,
                     interactive=True,
                     visible=True,
                 )
 
-        with gr.Column(variant="panel", scale=3):
-            tts_voice = gr.Audio(label="TTS голос")
+            with gr.Column(visible=False) as enter_local_file:
+                song_input = gr.Text(
+                    label="Путь к локальному файлу:",
+                    info="Введите полный путь к локальному файлу.",
+                    interactive=True,
+                    visible=True,
+                )
 
-    text_input = gr.Textbox(label="Введите текст", lines=5)
+            with gr.Column():
+                show_upload_button = gr.Button(
+                    value="Загрузить файл с устройства",
+                    interactive=True,
+                    visible=False,
+                )
+                show_enter_button = gr.Button(
+                    value="Ввести путь к локальному файлу",
+                    interactive=True,
+                    visible=True,
+                )
 
     with gr.Group():
         with gr.Row(equal_height=True):
@@ -292,8 +265,8 @@ def edge_tts_tab():
                 visible=True,
                 scale=2,
             )
-            converted_tts_voice = gr.Audio(
-                label="Преобразованный TTS голос",
+            converted_voice = gr.Audio(
+                label="Преобразованный голос",
                 interactive=False,
                 visible=True,
                 scale=9,
@@ -398,15 +371,27 @@ def edge_tts_tab():
                             visible=True,
                         )
 
-    language.change(update_edge_voices, inputs=language, outputs=voice)
+    # Загрузка файлов
+    local_file.input(process_file_upload, inputs=[local_file], outputs=[song_input, local_file])
 
+    # Обновление кнопок
+    show_upload_button.click(swap_visibility, outputs=[upload_file, enter_local_file, song_input, local_file])
+    show_enter_button.click(swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file])
+    show_upload_button.click(swap_buttons, outputs=[show_upload_button, show_enter_button])
+    show_enter_button.click(swap_buttons, outputs=[show_enter_button, show_upload_button])
+
+    # Показать hop_length
+    f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)
+
+    # Обновление списка моделей
     ref_btn.click(update_models_list, None, outputs=rvc_model)
+
+    # Запуск процесса преобразования
     generate_btn.click(
-        edge_tts_pipeline,
+        voice_pipeline,
         inputs=[
-            text_input,
+            song_input,
             rvc_model,
-            voice,
             pitch,
             index_rate,
             filter_radius,
@@ -418,5 +403,5 @@ def edge_tts_tab():
             f0_min,
             f0_max,
         ],
-        outputs=[converted_tts_voice, tts_voice],
+        outputs=[converted_voice],
     )

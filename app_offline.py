@@ -9,7 +9,7 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
-from tabs.conversion import conversion_tab
+from tabs.inference import inference_tab
 from tabs.install import files_upload, output_message, zip_upload
 from tabs.welcome import welcome_tab
 
@@ -34,7 +34,7 @@ with gr.Blocks(
         welcome_tab()
 
     with gr.Tab("Преобразование голоса (RVC)"):
-        conversion_tab()
+        inference_tab()
 
     with gr.Tab("Загрузка RVC моделей"):
         zip_upload(output_message_component)

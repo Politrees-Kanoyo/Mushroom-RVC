@@ -9,7 +9,7 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("faiss.loader").setLevel(logging.WARNING)
 
-from tabs.conversion import conversion_tab
+from tabs.inference import inference_tab
 from tabs.edge_tts import edge_tts_tab
 from tabs.install import (
     files_upload,
@@ -41,7 +41,7 @@ with gr.Blocks(
         welcome_tab()
 
     with gr.Tab("Преобразование голоса (RVC)"):
-        conversion_tab()
+        inference_tab()
 
     with gr.Tab("Преобразование текста в речь (TTS)"):
         edge_tts_tab()

@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from rvc.scripts.voice_conversion import voice_pipeline
+from tabs.inference import voice_pipeline
 
 rvc_models_dir = os.path.join(os.getcwd(), "models")
 
@@ -25,8 +25,7 @@ args = parser.parse_args()
 model_name = args.model_name
 if not os.path.exists(os.path.join(rvc_models_dir, model_name)):
     raise Exception(
-        f"\033[91mМодели {model_name} не существует. "
-        "Возможно, вы неправильно ввели имя.\033[0m"
+        f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
     )
 
 cover_path = voice_pipeline(

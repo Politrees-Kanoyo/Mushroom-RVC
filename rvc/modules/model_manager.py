@@ -11,21 +11,6 @@ from rvc.modules.download_source import download_file
 rvc_models_dir = os.path.join(os.getcwd(), "models")
 
 
-# Возвращает список папок, находящихся в директории моделей
-def get_folders(models_dir):
-    return [
-        item
-        for item in os.listdir(models_dir)
-        if os.path.isdir(os.path.join(models_dir, item))
-    ]
-
-
-# Обновляет список моделей для отображения в интерфейсе Gradio
-def update_models_list():
-    models_folders = get_folders(rvc_models_dir)
-    return gr.update(choices=models_folders)
-
-
 # Распаковывает zip-файл в указанную директорию и находит файлы модели (.pth и .index)
 def extract_zip(extraction_folder, zip_name):
     os.makedirs(
@@ -52,8 +37,7 @@ def extract_zip(extraction_folder, zip_name):
     if not model_filepath:
         # Если файл модели не найден, вызываем ошибку
         raise gr.Error(
-            "Не найден файл модели .pth в распакованном zip-файле. "
-            f"Проверьте содержимое в {extraction_folder}."
+            "Не найден файл модели .pth в распакованном zip-файле. Проверьте содержимое в {extraction_folder}."
         )
 
     # Переименовываем и удаляем ненужные папки
@@ -88,8 +72,7 @@ def download_from_url(url, dir_name, progress=gr.Progress()):
         if os.path.exists(extraction_folder):
             # Проверка на наличие директории с таким именем
             raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! "
-                "Выберите другое имя для вашей голосовой модели."
+                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
             )
 
         download_file(url, zip_name, progress)  # Скачивание файла
@@ -107,8 +90,7 @@ def upload_zip_file(zip_path, dir_name, progress=gr.Progress()):
         extraction_folder = os.path.join(rvc_models_dir, dir_name)
         if os.path.exists(extraction_folder):
             raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! "
-                "Выберите другое имя для вашей голосовой модели."
+                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
             )
 
         zip_name = zip_path.name
@@ -126,8 +108,7 @@ def upload_separate_files(pth_file, index_file, dir_name, progress=gr.Progress()
         extraction_folder = os.path.join(rvc_models_dir, dir_name)
         if os.path.exists(extraction_folder):
             raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! "
-                "Выберите другое имя для вашей голосовой модели."
+                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
             )
 
         os.makedirs(extraction_folder, exist_ok=True)
