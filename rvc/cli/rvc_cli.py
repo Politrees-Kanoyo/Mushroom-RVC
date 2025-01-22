@@ -8,7 +8,7 @@ rvc_models_dir = os.path.join(os.getcwd(), "models")
 parser = argparse.ArgumentParser(
     description="Замена голоса в директории output/", add_help=True
 )
-parser.add_argument("-i", "--song_input", type=str, required=True)
+parser.add_argument("-i", "--input_path", type=str, required=True)
 parser.add_argument("-m", "--model_name", type=str, required=True)
 parser.add_argument("-p", "--pitch", type=float, required=True)
 parser.add_argument("-ir", "--index_rate", type=float, default=0)
@@ -29,7 +29,7 @@ if not os.path.exists(os.path.join(rvc_models_dir, model_name)):
     )
 
 cover_path = voice_pipeline(
-    uploaded_file=args.song_input,
+    input_path=args.input_path,
     voice_model=model_name,
     pitch=args.pitch,
     index_rate=args.index_rate,
