@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title PolGen
+title PolGen Installer
 
 echo Welcome to the PolGen Installer!
 echo.

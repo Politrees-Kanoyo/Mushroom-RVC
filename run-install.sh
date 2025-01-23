@@ -2,7 +2,7 @@
 
 set -e
 
-title="PolGen"
+title="PolGen Installer"
 echo $title
 
 principal=$(pwd)
