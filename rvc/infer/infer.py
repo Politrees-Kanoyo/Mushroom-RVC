@@ -1,13 +1,18 @@
+import logging
+import warnings
 from multiprocessing import cpu_count
 
 import torch
 from fairseq import checkpoint_utils
 from scipy.io import wavfile
 
+logging.getLogger("fairseq").setLevel(logging.WARNING)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
+from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.my_utils import load_audio
-
-from .pipeline import VC
 
 
 # Конфигурация устройства и параметров
@@ -112,6 +117,8 @@ def rvc_infer(
     f0_min=50,
     f0_max=1100,
 ):
+    base_name = os.path.splitext(os.path.basename(input_path))[0]
+    print(f"\nПреобразование аудио — '{base_name}'...")
     audio = load_audio(input_path, 16000)
     pitch_guidance = cpt.get("f0", 1)
     audio_opt = vc.pipeline(
@@ -137,3 +144,4 @@ def rvc_infer(
         f0_max=f0_max,
     )
     wavfile.write(output_path, tgt_sr, audio_opt)
+    print(f"Преобразование завершено — '{output_path}'.")
