@@ -17,6 +17,7 @@ HUBERT_MODEL_PATH = os.path.join(
     os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt"
 )
 OUTPUT_DIR = os.path.join(os.getcwd(), "output")
+OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
 
 edge_voices = {
@@ -302,7 +303,7 @@ def edge_tts_tab():
                 output_format = gr.Dropdown(
                     value="mp3",
                     label="Формат файла",
-                    choices=["wav", "flac", "mp3"],
+                    choices=OUTPUT_FORMAT,
                     allow_custom_value=False,
                     filterable=False,
                     interactive=True,
