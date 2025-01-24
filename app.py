@@ -1,13 +1,10 @@
-import logging
 import os
 import sys
 
 import gradio as gr
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("faiss.loader").setLevel(logging.WARNING)
+from assets.logging_config import configure_logging
+configure_logging()
 
 from tabs.edge_tts import edge_tts_tab
 from tabs.inference import inference_tab
