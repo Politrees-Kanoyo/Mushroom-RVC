@@ -160,11 +160,14 @@ def voice_pipeline(
 
 
 def get_folders(models_dir):
-    return [
+    folders = [
         item
         for item in os.listdir(models_dir)
         if os.path.isdir(os.path.join(models_dir, item))
     ]
+    # Сортируем список папок
+    folders.sort(key=lambda x: (x.isdigit(), x.lower()))
+    return folders
 
 
 def update_models_list():
