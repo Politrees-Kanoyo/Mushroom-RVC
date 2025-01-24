@@ -28,6 +28,8 @@ def configure_logging():
     os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
     # Устанавливает уровень логирования WARNING для различных библиотек и модулей.
+    logging.getLogger("pydub").setLevel(logging.WARNING)
+    logging.getLogger("numba").setLevel(logging.WARNING)
     logging.getLogger("faiss").setLevel(logging.WARNING)
     logging.getLogger("torio").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
