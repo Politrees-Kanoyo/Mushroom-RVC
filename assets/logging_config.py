@@ -1,6 +1,7 @@
 import logging
 import os
 
+
 def configure_logging():
     """
     Настраивает конфигурацию логирования для различных библиотек и модулей.
@@ -23,7 +24,7 @@ def configure_logging():
 
     # Устанавливает уровень логирования 3 (ERROR) для TensorFlow.
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    
+
     # Отключает аналитику Gradio.
     os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -37,7 +38,6 @@ def configure_logging():
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("python_multipart").setLevel(logging.WARNING)
-
 
 
 # Пример использования функции configure_logging в основном файле:

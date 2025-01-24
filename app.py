@@ -4,6 +4,7 @@ import sys
 import gradio as gr
 
 from assets.logging_config import configure_logging
+
 configure_logging()
 
 from tabs.edge_tts import edge_tts_tab
