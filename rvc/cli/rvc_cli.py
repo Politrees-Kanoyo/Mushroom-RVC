@@ -1,9 +1,7 @@
 import argparse
 import os
 
-from tabs.inference import voice_pipeline
-
-rvc_models_dir = os.path.join(os.getcwd(), "models")
+from rvc.infer.infer import rvc_infer, RVC_MODELS_DIR
 
 parser = argparse.ArgumentParser(
     description="Замена голоса в директории output/", add_help=True
@@ -23,24 +21,27 @@ parser.add_argument("-f", "--format", type=str, default="mp3")
 args = parser.parse_args()
 
 model_name = args.model_name
-if not os.path.exists(os.path.join(rvc_models_dir, model_name)):
+if not os.path.exists(os.path.join(RVC_MODELS_DIR, model_name)):
     raise Exception(
         f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
     )
 
-cover_path = voice_pipeline(
-    input_path=args.input_path,
-    voice_model=model_name,
-    pitch=args.pitch,
-    index_rate=args.index_rate,
-    filter_radius=args.filter_radius,
-    volume_envelope=args.volume_envelope,
+output_path = rvc_infer(
+    voice_rvc=model_name,
+    voice_tts=None,
+    input_audio=args.input_path,
+    input_text=None,
     f0_method=args.method,
     hop_length=args.hop_length,
+    pitch=args.pitch,
+    index_rate=args.index_rate,
+    volume_envelope=args.volume_envelope,
     protect=args.protect,
+    filter_radius=args.filter_radius,
     f0_min=args.f0_min,
     f0_max=args.f0_max,
     output_format=args.format,
+    use_tts=False,
 )
 
-print("\033[1;92m\nГолос успешно заменен!\033[0m")
+print(f"\033[1;92m\nГолос успешно заменен!\n\033[0m — {output_path}")

@@ -142,14 +142,14 @@ def rvc_infer(
     if not voice_rvc:
         raise ValueError("Выберите модель голоса для преобразования.")
 
-    display_progress(0, "[~] Запуск конвейера генерации...")
+    display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
     if use_tts:
         if not input_text:
             raise ValueError("Введите необходимый текст в поле для ввода.")
         if not voice_tts:
             raise ValueError("Выберите язык и голос для синтеза речи.")
 
-        display_progress(0.2, "[~] Синтез речи...")
+        display_progress(0.2, "[🎙️] Синтез речи...")
         input_audio = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
         asyncio.run(text_to_speech(input_text, voice_tts, input_audio))
     else:
@@ -169,7 +169,7 @@ def rvc_infer(
     audio = load_audio(input_audio, 16000)
     pitch_guidance = cpt.get("f0", 1)
 
-    display_progress(0.5, f"[~] Преобразование голоса — {base_name}...")
+    display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...")
     audio_opt = vc.pipeline(
         hubert_model,
         net_g,
@@ -196,10 +196,10 @@ def rvc_infer(
     wavfile.write(output_audio, tgt_sr, audio_opt)
 
     # Конвертируем файл в сверео и выбранный пользователем формат
-    display_progress(0.8, "[~] Конвертация аудио в стерео...")
+    display_progress(0.8, "[💫] Конвертация аудио в стерео...")
     convert_audio(output_audio, output_audio, output_format)
 
-    display_progress(1.0, f"[~] Преобразование завершено — {output_audio}")
+    display_progress(1.0, f"[✅] Преобразование завершено — {output_audio}")
 
     # Освобождаем память
     del hubert_model, cpt, net_g, vc
@@ -209,4 +209,4 @@ def rvc_infer(
     if use_tts:
         return output_audio, input_audio
     else:
-        return output_audio, None
+        return output_audio

@@ -257,21 +257,21 @@ def inference_tab():
     generate_btn.click(
         rvc_infer,
         inputs=[
-            voice_rvc=rvc_model,
-            voice_tts=None,
-            input_audio=song_input,
-            input_text=None,
-            f0_method=f0_method,
-            hop_length=hop_length,
-            pitch=pitch,
-            index_rate=index_rate,
-            volume_envelope=volume_envelope,
-            protect=protect,
-            filter_radius=filter_radius,
-            f0_min=f0_min,
-            f0_max=f0_max,
-            output_format=output_format,
-            use_tts=False,
+            rvc_model,
+            gr.Textbox(visible=False),  # voice_tts
+            song_input,
+            gr.Textbox(visible=False),  # input_text
+            f0_method,
+            hop_length,
+            pitch,
+            index_rate,
+            volume_envelope,
+            protect,
+            filter_radius,
+            f0_min,
+            f0_max,
+            output_format,
+            gr.Checkbox(value=False, visible=False),  # use_tts
         ],
         outputs=[converted_voice],
     )

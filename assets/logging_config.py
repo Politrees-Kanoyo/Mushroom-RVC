@@ -37,6 +37,7 @@ def configure_logging():
     logging.getLogger("faiss").setLevel(logging.WARNING)
     logging.getLogger("torio").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("fairseq").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
