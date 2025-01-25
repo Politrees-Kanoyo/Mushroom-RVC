@@ -88,8 +88,6 @@ def edge_tts_tab():
                 rvc_model = gr.Dropdown(
                     label="Голосовые модели:",
                     choices=get_folders(RVC_MODELS_DIR),
-                    allow_custom_value=False,
-                    filterable=False,
                     interactive=True,
                     visible=True,
                 )
@@ -151,8 +149,6 @@ def edge_tts_tab():
                     value="mp3",
                     label="Формат файла",
                     choices=OUTPUT_FORMAT,
-                    allow_custom_value=False,
-                    filterable=False,
                     interactive=True,
                     visible=True,
                 )
@@ -166,8 +162,6 @@ def edge_tts_tab():
                             value="rmvpe+",
                             label="Метод выделения тона",
                             choices=["rmvpe+", "fcpe", "mangio-crepe"],
-                            allow_custom_value=False,
-                            filterable=False,
                             interactive=True,
                             visible=True,
                         )
