@@ -8,155 +8,9 @@ import soundfile as sf
 import torch
 from pydub import AudioSegment
 
-from rvc.infer.infer import Config, get_vc, load_hubert, rvc_infer
+from rvc.infer.infer import rvc_infer, RVC_MODELS_DIR
 
-RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
-HUBERT_MODEL_PATH = os.path.join(
-    os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt"
-)
-OUTPUT_DIR = os.path.join(os.getcwd(), "output")
 OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
-
-
-# Отображает прогресс выполнения задачи.
-def display_progress(percent, message, progress=gr.Progress()):
-    progress(percent, desc=message)
-
-
-# Загружает модель RVC и индекс по имени модели.
-def load_rvc_model(rvc_model):
-    # Формируем путь к директории модели
-    model_dir = os.path.join(RVC_MODELS_DIR, rvc_model)
-    # Получаем список файлов в директории модели
-    model_files = os.listdir(model_dir)
-
-    # Находим файл модели с расширением .pth
-    rvc_model_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".pth")), None
-    )
-    # Находим файл индекса с расширением .index
-    rvc_index_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".index")), None
-    )
-
-    # Проверяем, существует ли файл модели
-    if not rvc_model_path:
-        raise ValueError(
-            f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
-        )
-
-    return rvc_model_path, rvc_index_path
-
-
-# Конвертирует аудиофайл в стерео формат.
-def convert_audio(input_audio, output_audio, output_format):
-    # Загружаем аудиофайл
-    audio = AudioSegment.from_file(input_audio)
-
-    # Если аудио моно, конвертируем его в стерео
-    if audio.channels == 1:
-        audio = audio.set_channels(2)
-
-    # Сохраняем аудиофайл в выбранном формате
-    audio.export(output_audio, format=output_format)
-
-
-# Выполняет преобразование голоса с использованием модели RVC.
-def voice_conversion(
-    voice_model,
-    vocals_path,
-    output_path,
-    pitch,
-    f0_method,
-    index_rate,
-    filter_radius,
-    volume_envelope,
-    protect,
-    hop_length,
-    f0_min,
-    f0_max,
-):
-    rvc_model_path, rvc_index_path = load_rvc_model(voice_model)
-
-    config = Config()
-    hubert_model = load_hubert(config.device, HUBERT_MODEL_PATH)
-    cpt, version, net_g, tgt_sr, vc = get_vc(config.device, config, rvc_model_path)
-
-    rvc_infer(
-        rvc_index_path,
-        index_rate,
-        vocals_path,
-        output_path,
-        pitch,
-        f0_method,
-        cpt,
-        version,
-        net_g,
-        filter_radius,
-        tgt_sr,
-        volume_envelope,
-        protect,
-        hop_length,
-        vc,
-        hubert_model,
-        f0_min,
-        f0_max,
-    )
-
-    del hubert_model, cpt, net_g, vc
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
-# Основной конвейер для преобразования голоса.
-def voice_pipeline(
-    input_path,
-    voice_model,
-    pitch,
-    index_rate=0.5,
-    filter_radius=3,
-    volume_envelope=0.25,
-    f0_method="rmvpe+",
-    hop_length=128,
-    protect=0.33,
-    output_format="mp3",
-    f0_min=50,
-    f0_max=1100,
-    progress=gr.Progress(),
-):
-    if not input_path:
-        raise ValueError(
-            "Не удалось найти аудиофайл. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
-        )
-    if not voice_model:
-        raise ValueError("Выберите модель голоса для преобразования.")
-    if not os.path.exists(input_path):
-        raise ValueError(f"Файл {input_path} не найден.")
-
-    display_progress(0, "[~] Запуск конвейера генерации...", progress)
-    base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
-
-    display_progress(0.4, "[~] Преобразование вокала...", progress)
-    voice_conversion(
-        voice_model,
-        input_path,
-        output_path,
-        pitch,
-        f0_method,
-        index_rate,
-        filter_radius,
-        volume_envelope,
-        protect,
-        hop_length,
-        f0_min,
-        f0_max,
-    )
-
-    display_progress(0.8, "[~] Конвертация аудио в стерео...", progress)
-    convert_audio(output_path, output_path, output_format)
-
-    return output_path
 
 
 def get_folders(models_dir):
@@ -401,20 +255,23 @@ def inference_tab():
 
     # Запуск процесса преобразования
     generate_btn.click(
-        voice_pipeline,
+        rvc_infer,
         inputs=[
-            song_input,
-            rvc_model,
-            pitch,
-            index_rate,
-            filter_radius,
-            volume_envelope,
-            f0_method,
-            hop_length,
-            protect,
-            output_format,
-            f0_min,
-            f0_max,
+            voice_rvc=rvc_model,
+            voice_tts=None,
+            input_audio=song_input,
+            input_text=None,
+            f0_method=f0_method,
+            hop_length=hop_length,
+            pitch=pitch,
+            index_rate=index_rate,
+            volume_envelope=volume_envelope,
+            protect=protect,
+            filter_radius=filter_radius,
+            f0_min=f0_min,
+            f0_max=f0_max,
+            output_format=output_format,
+            use_tts=False,
         ],
         outputs=[converted_voice],
     )

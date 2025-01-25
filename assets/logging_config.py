@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 
 
 def configure_logging():
@@ -22,18 +23,21 @@ def configure_logging():
     чтобы игнорировать сообщения уровня DEBUG и INFO.
     """
 
-    # Устанавливает уровень логирования 3 (ERROR) для TensorFlow.
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-    # Отключает аналитику Gradio.
+    # ===== Настройка переменных окружения для зависимостей ===== #
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  
     os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
-    # Устанавливает уровень логирования WARNING для различных библиотек и модулей.
+    # ===== Обработка системных предупреждений ===== #
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=UserWarning)
+
+    # ===== Настройка логгеров сторонних библиотек ===== #
     logging.getLogger("pydub").setLevel(logging.WARNING)
     logging.getLogger("numba").setLevel(logging.WARNING)
     logging.getLogger("faiss").setLevel(logging.WARNING)
     logging.getLogger("torio").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("fairseq").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
