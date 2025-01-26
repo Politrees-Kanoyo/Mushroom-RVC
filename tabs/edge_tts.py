@@ -1,13 +1,6 @@
-import gc
 import os
 
-import edge_tts
 import gradio as gr
-import librosa
-import numpy as np
-import soundfile as sf
-import torch
-from pydub import AudioSegment
 
 from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
 

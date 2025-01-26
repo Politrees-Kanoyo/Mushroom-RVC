@@ -23,7 +23,7 @@ args = parser.parse_args()
 model_name = args.model_name
 if not os.path.exists(os.path.join(RVC_MODELS_DIR, model_name)):
     raise Exception(
-        f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
+        f"\033[91mОШИБКА!\033[0m Модель {model_name} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
     )
 
 output_path = rvc_infer(
