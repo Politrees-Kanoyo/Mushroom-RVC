@@ -1,133 +1,181 @@
-import logging
+import gc
 import os
-import warnings
 from multiprocessing import cpu_count
-
+import asyncio
+import edge_tts
 import torch
 from fairseq import checkpoint_utils
+from pydub import AudioSegment
 from scipy.io import wavfile
+import gradio as gr
 
-logging.getLogger("fairseq").setLevel(logging.WARNING)
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-
+from rvc.infer.config import Config
 from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.my_utils import load_audio
 
+RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
+EMBEDDERS_DIR = os.path.join(os.getcwd(), "rvc", "models", "embedders")
+HUBERT_BASE_PATH = os.path.join(EMBEDDERS_DIR, "hubert_base.pt")
+OUTPUT_DIR = os.path.join(os.getcwd(), "output")
 
-# Конфигурация устройства и параметров
-class Config:
-    def __init__(self):
-        self.device = self.get_device()
-        self.n_cpu = cpu_count()
-        self.gpu_name = None
-        self.gpu_mem = None
-        self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
+# Инициализация конфигурации
+config = Config()
 
-    def get_device(self):
-        if torch.cuda.is_available():
-            return "cuda"
-        elif torch.backends.mps.is_available():
-            return "mps"
-        else:
-            return "cpu"
 
-    def device_config(self):
-        if torch.cuda.is_available():
-            print("Используемое устройство - CUDA")
-            self._configure_gpu()
-        elif torch.backends.mps.is_available():
-            print("Используемое устройство - MPS")
-            self.device = "mps"
-        else:
-            print("Используемое устройство - CPU")
-            self.device = "cpu"
+# Отображает прогресс выполнения задачи.
+def display_progress(percent, message, progress=gr.Progress()):
+    print(message)
+    progress(percent, desc=message)
 
-        x_pad, x_query, x_center, x_max = (1, 6, 38, 41)
-        if self.gpu_mem is not None and self.gpu_mem <= 4:
-            x_pad, x_query, x_center, x_max = (1, 5, 30, 32)
 
-        return x_pad, x_query, x_center, x_max
+# Загружает модель RVC и индекс по имени модели.
+def load_rvc_model(rvc_model):
+    # Формируем путь к директории модели
+    model_dir = os.path.join(RVC_MODELS_DIR, rvc_model)
+    # Получаем список файлов в директории модели
+    model_files = os.listdir(model_dir)
 
-    def _configure_gpu(self):
-        self.gpu_name = torch.cuda.get_device_name(self.device)
-        self.gpu_mem = int(
-            torch.cuda.get_device_properties(self.device).total_memory
-            / 1024
-            / 1024
-            / 1024
-            + 0.4
+    # Находим файл модели с расширением .pth
+    rvc_model_path = next(
+        (os.path.join(model_dir, f) for f in model_files if f.endswith(".pth")), None
+    )
+    # Находим файл индекса с расширением .index
+    rvc_index_path = next(
+        (os.path.join(model_dir, f) for f in model_files if f.endswith(".index")), None
+    )
+
+    # Проверяем, существует ли файл модели
+    if not rvc_model_path:
+        raise ValueError(
+            f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
         )
 
+    return rvc_model_path, rvc_index_path
 
-# Загрузка модели Hubert
-def load_hubert(device, model_path):
+
+# Загружает модель Hubert
+def load_hubert(model_path):
+    # Загружаем модель Hubert и её конфигурацию
     models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
         [model_path], suffix=""
     )
-    hubert = models[0].to(device)
+    # Перемещаем модель на устройство (GPU или CPU)
+    hubert = models[0].to(config.device)
+    # Преобразуем модель в полную точность (float)
     hubert = hubert.float()
+    # Устанавливаем модель в режим оценки (инференс)
     hubert.eval()
     return hubert
 
 
-# Получение голосового преобразователя
-def get_vc(device, config, model_path):
+# Получает конвертер голоса
+def get_vc(model_path):
+    # Загружаем состояние модели из файла
     cpt = torch.load(model_path, map_location="cpu", weights_only=True)
+
+    # Проверяем корректность формата модели
     if "config" not in cpt or "weight" not in cpt:
         raise ValueError(
-            f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную с использованием RVC v2."
+            f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную на RVC v2."
         )
 
+    # Извлекаем параметры модели
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
     pitch_guidance = cpt.get("f0", 1)
     version = cpt.get("version", "v1")
     input_dim = 768 if version == "v2" else 256
 
+    # Инициализируем синтезатор
     net_g = Synthesizer(*cpt["config"], use_f0=pitch_guidance, input_dim=input_dim)
 
+    # Удаляем ненужный слой
     del net_g.enc_q
     net_g.load_state_dict(cpt["weight"], strict=False)
-    net_g = net_g.to(device).float()
+    # Устанавливаем модель в режим оценки и перемещаем на устройство
+    net_g = net_g.to(config.device).float()
     net_g.eval()
 
+    # Инициализируем объект конвертера голоса
     vc = VC(tgt_sr, config)
     return cpt, version, net_g, tgt_sr, vc
 
 
+# Конвертируем файл в сверео и выбранный пользователем формат
+def convert_audio(input_audio, output_audio, output_format):
+    # Загружаем аудиофайл
+    audio = AudioSegment.from_file(input_audio)
+
+    # Если аудио моно, конвертируем его в стерео
+    if audio.channels == 1:
+        audio = audio.set_channels(2)
+
+    # Сохраняем аудиофайл в выбранном формате
+    audio.export(output_audio, format=output_format)
+
+
+# Синтезирует текст в речь с использованием edge_tts.
+async def text_to_speech(text, voice, output_path):
+    communicate = edge_tts.Communicate(text=text, voice=voice)
+    await communicate.save(output_path)
+
+
 # Выполнение инференса с использованием RVC
 def rvc_infer(
-    index_path,
-    index_rate,
-    input_path,
-    output_path,
-    pitch,
-    f0_method,
-    cpt,
-    version,
-    net_g,
-    filter_radius,
-    tgt_sr,
-    volume_envelope,
-    protect,
-    hop_length,
-    vc,
-    hubert_model,
+    voice_rvc=None,
+    voice_tts=None,
+    input_audio=None,
+    input_text=None,
+    f0_method="rmvpe+",
+    hop_length=128,
+    pitch=0,
+    index_rate=0.5,
+    volume_envelope=0.25,
+    protect=0.33,
+    filter_radius=3,
     f0_min=50,
     f0_max=1100,
+    output_format="wav",
+    use_tts=False,
 ):
-    base_name = os.path.splitext(os.path.basename(input_path))[0]
-    print(f"\nПреобразование аудио — '{base_name}'...")
-    audio = load_audio(input_path, 16000)
+    if not voice_rvc:
+        raise ValueError("Выберите модель голоса для преобразования.")
+
+    display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
+    if use_tts:
+        if not input_text:
+            raise ValueError("Введите необходимый текст в поле для ввода.")
+        if not voice_tts:
+            raise ValueError("Выберите язык и голос для синтеза речи.")
+
+        display_progress(0.2, "[🎙️] Синтез речи...")
+        input_audio = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
+        asyncio.run(text_to_speech(input_text, voice_tts, input_audio))
+    else:
+        if not input_audio or not os.path.exists(input_audio):
+            raise ValueError(f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему.")
+
+    base_name = os.path.splitext(os.path.basename(input_audio))[0]
+    output_audio = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
+
+    # Загружаем модель Hubert
+    hubert_model = load_hubert(HUBERT_BASE_PATH)
+    # Загружаем модель RVC и индекс
+    model_path, index_path = load_rvc_model(voice_rvc)
+    # Получаем конвертер голоса
+    cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
+    # Загружаем аудиофайл
+    audio = load_audio(input_audio, 16000)
     pitch_guidance = cpt.get("f0", 1)
+
+    display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...")
     audio_opt = vc.pipeline(
         hubert_model,
         net_g,
         0,
         audio,
-        input_path,
+        input_audio,
         pitch,
         f0_method,
         index_path,
@@ -144,5 +192,21 @@ def rvc_infer(
         f0_min=f0_min,
         f0_max=f0_max,
     )
-    wavfile.write(output_path, tgt_sr, audio_opt)
-    print(f"Преобразование завершено — '{output_path}'.")
+    # Сохраняем результат в wav файл
+    wavfile.write(output_audio, tgt_sr, audio_opt)
+
+    # Конвертируем файл в сверео и выбранный пользователем формат
+    display_progress(0.8, "[💫] Конвертация аудио в стерео...")
+    convert_audio(output_audio, output_audio, output_format)
+
+    display_progress(1.0, f"[✅] Преобразование завершено — {output_audio}")
+
+    # Освобождаем память
+    del hubert_model, cpt, net_g, vc
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    if use_tts:
+        return output_audio, input_audio
+    else:
+        return output_audio

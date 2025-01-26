@@ -10,13 +10,8 @@ import soundfile as sf
 import torch
 from pydub import AudioSegment
 
-from rvc.infer.infer import Config, get_vc, load_hubert, rvc_infer
+from rvc.infer.infer import rvc_infer, RVC_MODELS_DIR
 
-RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
-HUBERT_MODEL_PATH = os.path.join(
-    os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt"
-)
-OUTPUT_DIR = os.path.join(os.getcwd(), "output")
 OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
 
@@ -64,157 +59,6 @@ def update_edge_voices(selected_language):
     return gr.update(choices=voices, value=voices[0] if voices else None)
 
 
-# Отображает прогресс выполнения задачи.
-def display_progress(percent, message, progress=gr.Progress()):
-    progress(percent, desc=message)
-
-
-# Загружает модель RVC и индекс по имени модели.
-def load_rvc_model(rvc_model):
-    # Формируем путь к директории модели
-    model_dir = os.path.join(RVC_MODELS_DIR, rvc_model)
-    # Получаем список файлов в директории модели
-    model_files = os.listdir(model_dir)
-
-    # Находим файл модели с расширением .pth
-    rvc_model_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".pth")), None
-    )
-    # Находим файл индекса с расширением .index
-    rvc_index_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".index")), None
-    )
-
-    # Проверяем, существует ли файл модели
-    if not rvc_model_path:
-        raise ValueError(
-            f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
-        )
-
-    return rvc_model_path, rvc_index_path
-
-
-# Конвертирует аудиофайл в стерео формат.
-def convert_audio(input_audio, output_audio, output_format):
-    # Загружаем аудиофайл
-    audio = AudioSegment.from_file(input_audio)
-
-    # Если аудио моно, конвертируем его в стерео
-    if audio.channels == 1:
-        audio = audio.set_channels(2)
-
-    # Сохраняем аудиофайл в выбранном формате
-    audio.export(output_audio, format=output_format)
-
-
-# Синтезирует текст в речь с использованием edge_tts.
-async def text_to_speech(text, voice, output_path):
-    communicate = edge_tts.Communicate(text=text, voice=voice)
-    await communicate.save(output_path)
-
-
-# Выполняет преобразование голоса с использованием модели RVC.
-def voice_conversion(
-    voice_model,
-    input_path,
-    output_path,
-    pitch,
-    f0_method,
-    index_rate,
-    filter_radius,
-    volume_envelope,
-    protect,
-    hop_length,
-    f0_min,
-    f0_max,
-):
-    rvc_model_path, rvc_index_path = load_rvc_model(voice_model)
-
-    config = Config()
-    hubert_model = load_hubert(config.device, HUBERT_MODEL_PATH)
-    cpt, version, net_g, tgt_sr, vc = get_vc(config.device, config, rvc_model_path)
-
-    rvc_infer(
-        rvc_index_path,
-        index_rate,
-        input_path,
-        output_path,
-        pitch,
-        f0_method,
-        cpt,
-        version,
-        net_g,
-        filter_radius,
-        tgt_sr,
-        volume_envelope,
-        protect,
-        hop_length,
-        vc,
-        hubert_model,
-        f0_min,
-        f0_max,
-    )
-
-    del hubert_model, cpt, net_g, vc
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
-# Основной конвейер для синтеза речи и преобразования голоса.
-def edge_tts_pipeline(
-    text,
-    voice_model,
-    voice,
-    pitch,
-    index_rate=0.5,
-    filter_radius=3,
-    volume_envelope=0.25,
-    f0_method="rmvpe+",
-    hop_length=128,
-    protect=0.33,
-    output_format="mp3",
-    f0_min=50,
-    f0_max=1100,
-    progress=gr.Progress(),
-):
-    if not text:
-        raise ValueError("Введите необходимый текст в поле для ввода.")
-    if not voice:
-        raise ValueError("Выберите язык и голос для синтеза речи.")
-    if not voice_model:
-        raise ValueError("Выберите модель голоса для преобразования.")
-
-    display_progress(0, "[~] Запуск конвейера генерации...", progress)
-    tts_voice_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
-    tts_voice_convert_path = os.path.join(
-        OUTPUT_DIR, f"TTS_Voice_(Converted).{output_format}"
-    )
-
-    display_progress(0.2, "[~] Синтез речи...", progress)
-    asyncio.run(text_to_speech(text, voice, tts_voice_path))
-
-    display_progress(0.4, "[~] Преобразование голоса...", progress)
-    voice_conversion(
-        voice_model,
-        tts_voice_path,
-        tts_voice_convert_path,
-        pitch,
-        f0_method,
-        index_rate,
-        filter_radius,
-        volume_envelope,
-        protect,
-        hop_length,
-        f0_min,
-        f0_max,
-    )
-
-    display_progress(0.8, "[~] Конвертация аудио в стерео...", progress)
-    convert_audio(tts_voice_path, tts_voice_path, output_format)
-
-    return tts_voice_convert_path, tts_voice_path
-
-
 def get_folders(models_dir):
     folders = [
         item
@@ -244,8 +88,6 @@ def edge_tts_tab():
                 rvc_model = gr.Dropdown(
                     label="Голосовые модели:",
                     choices=get_folders(RVC_MODELS_DIR),
-                    allow_custom_value=False,
-                    filterable=False,
                     interactive=True,
                     visible=True,
                 )
@@ -307,8 +149,6 @@ def edge_tts_tab():
                     value="mp3",
                     label="Формат файла",
                     choices=OUTPUT_FORMAT,
-                    allow_custom_value=False,
-                    filterable=False,
                     interactive=True,
                     visible=True,
                 )
@@ -322,8 +162,6 @@ def edge_tts_tab():
                             value="rmvpe+",
                             label="Метод выделения тона",
                             choices=["rmvpe+", "fcpe", "mangio-crepe"],
-                            allow_custom_value=False,
-                            filterable=False,
                             interactive=True,
                             visible=True,
                         )
@@ -406,21 +244,23 @@ def edge_tts_tab():
 
     ref_btn.click(update_models_list, None, outputs=rvc_model)
     generate_btn.click(
-        edge_tts_pipeline,
+        rvc_infer,
         inputs=[
-            text_input,
             rvc_model,
             voice,
-            pitch,
-            index_rate,
-            filter_radius,
-            volume_envelope,
+            gr.Textbox(visible=False),  # input_audio
+            text_input,
             f0_method,
             hop_length,
+            pitch,
+            index_rate,
+            volume_envelope,
             protect,
-            output_format,
+            filter_radius,
             f0_min,
             f0_max,
+            output_format,
+            gr.Checkbox(value=True, visible=False),  # use_tts
         ],
         outputs=[converted_tts_voice, tts_voice],
     )
