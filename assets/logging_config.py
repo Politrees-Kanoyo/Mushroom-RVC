@@ -24,7 +24,7 @@ def configure_logging():
     """
 
     # ===== Настройка переменных окружения для зависимостей ===== #
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
     os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
     # ===== Обработка системных предупреждений ===== #

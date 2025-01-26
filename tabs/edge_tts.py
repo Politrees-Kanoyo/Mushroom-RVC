@@ -1,4 +1,3 @@
-import asyncio
 import gc
 import os
 
@@ -10,7 +9,7 @@ import soundfile as sf
 import torch
 from pydub import AudioSegment
 
-from rvc.infer.infer import rvc_infer, RVC_MODELS_DIR
+from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
 
 OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
