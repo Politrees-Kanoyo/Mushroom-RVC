@@ -17,15 +17,7 @@ RMVPE_DIR = os.path.join(PREDICTORS_DIR, "rmvpe.pt")
 FCPE_DIR = os.path.join(PREDICTORS_DIR, "fcpe.pt")
 
 # Фильтр Баттерворта для высоких частот
-FILTER_ORDER = 5  # Порядок фильтра
-CUTOFF_FREQUENCY = 48  # Частота среза (в Гц)
-SAMPLE_RATE = 16000  # Частота дискретизации (в Гц)
-bh, ah = signal.butter(
-    N=FILTER_ORDER, Wn=CUTOFF_FREQUENCY, btype="high", fs=SAMPLE_RATE
-)
-
-
-input_audio_path2wav = {}
+bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
 
 # Класс для обработки аудио
@@ -144,7 +136,6 @@ class VC:
         """
         Получает F0 с использованием выбранного метода.
         """
-        global input_audio_path2wav
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
 
