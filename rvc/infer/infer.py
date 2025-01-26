@@ -1,13 +1,13 @@
+import asyncio
 import gc
 import os
-from multiprocessing import cpu_count
-import asyncio
+
 import edge_tts
+import gradio as gr
 import torch
 from fairseq import checkpoint_utils
 from pydub import AudioSegment
 from scipy.io import wavfile
-import gradio as gr
 
 from rvc.infer.config import Config
 from rvc.infer.pipeline import VC
@@ -154,7 +154,9 @@ def rvc_infer(
         asyncio.run(text_to_speech(input_text, voice_tts, input_audio))
     else:
         if not input_audio or not os.path.exists(input_audio):
-            raise ValueError(f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему.")
+            raise ValueError(
+                f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
+            )
 
     base_name = os.path.splitext(os.path.basename(input_audio))[0]
     output_audio = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
