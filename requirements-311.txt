@@ -6,6 +6,8 @@ https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages
 tensorboardX
 faiss-cpu==1.7.3
 torchcrepe==0.0.23
+ffmpeg-python>=0.2.0
+einops
 local-attention
 edge-tts
 PolUVR[gpu]

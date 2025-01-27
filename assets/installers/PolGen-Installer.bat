@@ -8,7 +8,7 @@ echo.
 set "PRINCIPAL=%cd%"
 set "MINICONDA_DIR=%UserProfile%\Miniconda3"
 set "ENV_DIR=%PRINCIPAL%\env"
-set "MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-py310_24.7.1-0-Windows-x86_64.exe"
+set "MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-py310_24.11.1-0-Windows-x86_64.exe"
 set "CONDA_EXE=%MINICONDA_DIR%\Scripts\conda.exe"
 
 call :install_miniconda
