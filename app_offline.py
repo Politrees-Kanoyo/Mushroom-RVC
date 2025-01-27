@@ -36,6 +36,9 @@ with gr.Blocks(
         inference_tab()
 
     with gr.Tab("PolUVR (UVR)"):
+        gr.HTML(
+            "<center><h3>PolUVR не будет функционировать без подключения к интернету, если вы ранее не установили необходимые модели.</h3></center>"
+        )
         poluvr_tab()
 
     with gr.Tab("Загрузка RVC моделей"):
