@@ -10,6 +10,7 @@ configure_logging()
 from tabs.inference import inference_tab
 from tabs.install import files_upload, output_message, zip_upload
 from tabs.welcome import welcome_tab
+from tabs.uvr import poluvr_tab
 
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
@@ -33,6 +34,9 @@ with gr.Blocks(
 
     with gr.Tab("Преобразование голоса (RVC)"):
         inference_tab()
+
+    with gr.Tab("PolUVR (UVR)"):
+        poluvr_tab()
 
     with gr.Tab("Загрузка RVC моделей"):
         zip_upload(output_message_component)

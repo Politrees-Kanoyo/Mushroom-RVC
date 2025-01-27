@@ -17,6 +17,7 @@ from tabs.install import (
     zip_upload,
 )
 from tabs.welcome import welcome_tab
+from tabs.uvr import poluvr_tab
 
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
@@ -43,6 +44,9 @@ with gr.Blocks(
 
     with gr.Tab("Преобразование текста в речь (TTS)"):
         edge_tts_tab()
+
+    with gr.Tab("PolUVR (UVR)"):
+        poluvr_tab()
 
     with gr.Tab("Загрузка моделей"):
         with gr.Tab("Загрузка RVC моделей"):

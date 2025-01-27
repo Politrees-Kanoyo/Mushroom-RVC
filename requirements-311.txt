@@ -8,3 +8,4 @@ faiss-cpu==1.7.3
 torchcrepe==0.0.23
 local-attention
 edge-tts
+PolUVR[gpu]

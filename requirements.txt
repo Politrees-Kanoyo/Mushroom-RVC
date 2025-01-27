@@ -14,3 +14,4 @@ gradio>=5.5.0
 mega.py
 wget
 gdown
+PolUVR[gpu]
