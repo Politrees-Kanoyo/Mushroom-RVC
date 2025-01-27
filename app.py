@@ -16,8 +16,8 @@ from tabs.install import (
     url_zip_download,
     zip_upload,
 )
-from tabs.welcome import welcome_tab
 from tabs.uvr import poluvr_tab
+from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
