@@ -9,8 +9,8 @@ configure_logging()
 
 from tabs.inference import inference_tab
 from tabs.install import files_upload, output_message, zip_upload
-from tabs.welcome import welcome_tab
 from tabs.uvr import poluvr_tab
+from tabs.welcome import welcome_tab
 
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
