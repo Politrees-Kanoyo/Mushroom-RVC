@@ -11,10 +11,6 @@ ENV_DIR="$PRINCIPAL/env"
 MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-py310_24.11.1-0-Linux-x86_64.sh"
 CONDA_EXE="$MINICONDA_DIR/bin/conda"
 
-log_message() {
-    echo "$1"
-}
-
 install_miniconda() {
     if [ -d "$MINICONDA_DIR" ]; then
         echo "Miniconda already installed. Skipping installation."
@@ -73,29 +69,29 @@ install_dependencies() {
 
 install_ffmpeg() {
     if command -v brew > /dev/null; then
-        log_message "Installing FFmpeg using Homebrew on macOS..."
+        echo "Installing FFmpeg using Homebrew on macOS..."
         brew install ffmpeg
     elif command -v apt > /dev/null; then
-        log_message "Installing FFmpeg using apt..."
+        echo "Installing FFmpeg using apt..."
         sudo apt update && sudo apt install -y ffmpeg
     elif command -v pacman > /dev/null; then
-        log_message "Installing FFmpeg using pacman..."
+        echo "Installing FFmpeg using pacman..."
         sudo pacman -Syu --noconfirm ffmpeg
     elif command -v dnf > /dev/null; then
-        log_message "Installing FFmpeg using dnf..."
+        echo "Installing FFmpeg using dnf..."
         sudo dnf install -y ffmpeg --allowerasing || install_ffmpeg_flatpak
     else
-        log_message "Unsupported distribution for FFmpeg installation. Trying Flatpak..."
+        echo "Unsupported distribution for FFmpeg installation. Trying Flatpak..."
         install_ffmpeg_flatpak
     fi
 }
 
 install_ffmpeg_flatpak() {
     if command -v flatpak > /dev/null; then
-        log_message "Installing FFmpeg using Flatpak..."
+        echo "Installing FFmpeg using Flatpak..."
         flatpak install --user -y flathub org.freedesktop.Platform.ffmpeg
     else
-        log_message "Flatpak is not installed. Installing Flatpak..."
+        echo "Flatpak is not installed. Installing Flatpak..."
         if command -v apt > /dev/null; then
             sudo apt install -y flatpak
         elif command -v pacman > /dev/null; then
@@ -105,7 +101,7 @@ install_ffmpeg_flatpak() {
         elif command -v brew > /dev/null; then
             brew install flatpak
         else
-            log_message "Unable to install Flatpak automatically. Please install Flatpak and try again."
+            echo "Unable to install Flatpak automatically. Please install Flatpak and try again."
             exit 1
         fi
         flatpak install --user -y flathub org.freedesktop.Platform.ffmpeg
