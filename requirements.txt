@@ -17,4 +17,4 @@ gdown
 PolUVR[gpu]
 torch<2.6
 torchaudio<2.6
-torchvision<0.20
+torchvision<0.21
