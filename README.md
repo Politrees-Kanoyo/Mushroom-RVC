@@ -80,3 +80,9 @@ PolGen предоставляет гибкость в выборе моделе�
 Если у вас есть вопросы или предложения, пожалуйста, свяжитесь со мной через [Telegram](https://t.me/Politrees2) или [GitHub Issues](https://github.com/Bebra777228/Pol-Litres-RVC/issues).
 
 ---
+
+# Внесли свой вклад в проект:
+
+<a href="https://github.com/Bebra777228/PolGen-RVC/graphs/contributors" target="_blank">
+  <img src="https://contrib.rocks/image?repo=Bebra777228/PolGen-RVC" />
+</a>
