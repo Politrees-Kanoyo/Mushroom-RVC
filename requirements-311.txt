@@ -11,3 +11,6 @@ einops
 local-attention
 edge-tts
 PolUVR[gpu]
+torch<2.6
+torchaudio<2.6
+torchvision<0.20
