@@ -13,7 +13,7 @@ I acknowledge that there have been some mistakes while working with the reposito
 5. **Add Function Documentation**: Ensure all functions are well-documented to improve code understandability and maintainability.
 6. **Organize the Codebase**: Refactor the code to improve structure and maintainability.
 7. **Simplify Output Logic**: Streamline the output processes to make the program more user-friendly.
-8. **Create a Package**: Develop a package to allow the project to be used as a library, enhancing its usability and integration capabilities.
+8. **Develop GUI Application**: Create a graphical user interface (GUI) program or application to enhance usability and integration capabilities.
 9. **Update RVC Algorithms**: Improve the RVC algorithms to support various vocoders, similar to Applio.
 10. **Achieve Full Automation**: Ensure complete automation of the process for easy and convenient generation of AI covers.
 
