@@ -56,15 +56,11 @@ def load_rvc_model(rvc_model):
 
 # Загружает модель Hubert
 def load_hubert(model_path):
-    # Загружаем модель Hubert и её конфигурацию
     models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
         [model_path], suffix=""
     )
-    # Перемещаем модель на устройство (GPU или CPU)
     hubert = models[0].to(config.device)
-    # Преобразуем модель в полную точность (float)
     hubert = hubert.float()
-    # Устанавливаем модель в режим оценки (инференс)
     hubert.eval()
     return hubert
 
@@ -85,6 +81,7 @@ def get_vc(model_path):
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
     pitch_guidance = cpt.get("f0", 1)
     version = cpt.get("version", "v1")
+    # vocoder = cpt.get("vocoder", "HiFi-GAN") — на будущее
     input_dim = 768 if version == "v2" else 256
 
     # Инициализируем синтезатор
@@ -93,7 +90,6 @@ def get_vc(model_path):
     # Удаляем ненужный слой
     del net_g.enc_q
     net_g.load_state_dict(cpt["weight"], strict=False)
-    # Устанавливаем модель в режим оценки и перемещаем на устройство
     net_g = net_g.to(config.device).float()
     net_g.eval()
 
