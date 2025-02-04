@@ -1,4 +1,4 @@
-name: Линтер кода
+name: Code Linter
 
 on:
   push:
@@ -13,30 +13,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Проверка кода
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Настройка Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Установка зависимостей
+      - name: Install dependencies
         run: |
           pip install --upgrade pip==24.0
           pip install flake8 pylint vulture
           pip install -r requirements.txt
 
-      - name: Запуск flake8
+      - name: Run flake8
         run: flake8 .
         continue-on-error: true
 
-      - name: Запуск PyLint
+      - name: Run PyLint
         run: pylint .
         continue-on-error: true
 
-      - name: Запуск Vulture
+      - name: Run Vulture
         run: vulture .
         continue-on-error: true
