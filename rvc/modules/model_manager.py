@@ -13,9 +13,7 @@ rvc_models_dir = os.path.join(os.getcwd(), "models")
 
 # Распаковывает zip-файл в указанную директорию и находит файлы модели (.pth и .index)
 def extract_zip(extraction_folder, zip_name):
-    os.makedirs(
-        extraction_folder, exist_ok=True
-    )  # Создаем директорию для распаковки, если она не существует
+    os.makedirs(extraction_folder, exist_ok=True)  # Создаем директорию для распаковки, если она не существует
     with zipfile.ZipFile(zip_name, "r") as zip_ref:
         zip_ref.extractall(extraction_folder)  # Распаковываем zip-файл
     os.remove(zip_name)  # Удаляем zip-файл после распаковки
@@ -25,20 +23,14 @@ def extract_zip(extraction_folder, zip_name):
     for root, _, files in os.walk(extraction_folder):
         for name in files:
             file_path = os.path.join(root, name)
-            if (
-                name.endswith(".index") and os.stat(file_path).st_size > 1024 * 100
-            ):  # Минимальный размер файла index
+            if name.endswith(".index") and os.stat(file_path).st_size > 1024 * 100:  # Минимальный размер файла index
                 index_filepath = file_path
-            if (
-                name.endswith(".pth") and os.stat(file_path).st_size > 1024 * 1024 * 40
-            ):  # Минимальный размер файла pth
+            if name.endswith(".pth") and os.stat(file_path).st_size > 1024 * 1024 * 40:  # Минимальный размер файла pth
                 model_filepath = file_path
 
     if not model_filepath:
         # Если файл модели не найден, вызываем ошибку
-        raise gr.Error(
-            "Не найден файл модели .pth в распакованном zip-файле. Проверьте содержимое в {extraction_folder}."
-        )
+        raise gr.Error("Не найден файл модели .pth в распакованном zip-файле. Проверьте содержимое в {extraction_folder}.")
 
     # Переименовываем и удаляем ненужные папки
     rename_and_cleanup(extraction_folder, model_filepath, index_filepath)
@@ -71,9 +63,7 @@ def download_from_url(url, dir_name, progress=gr.Progress()):
         extraction_folder = os.path.join(rvc_models_dir, dir_name)
         if os.path.exists(extraction_folder):
             # Проверка на наличие директории с таким именем
-            raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
-            )
+            raise gr.Error(f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели.")
 
         download_file(url, zip_name, progress)  # Скачивание файла
         progress(0.8, desc="[~] Распаковка zip-файла...")
@@ -89,9 +79,7 @@ def upload_zip_file(zip_path, dir_name, progress=gr.Progress()):
     try:
         extraction_folder = os.path.join(rvc_models_dir, dir_name)
         if os.path.exists(extraction_folder):
-            raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
-            )
+            raise gr.Error(f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели.")
 
         zip_name = zip_path.name
         progress(0.8, desc="[~] Распаковка zip-файла...")
@@ -107,9 +95,7 @@ def upload_separate_files(pth_file, index_file, dir_name, progress=gr.Progress()
     try:
         extraction_folder = os.path.join(rvc_models_dir, dir_name)
         if os.path.exists(extraction_folder):
-            raise gr.Error(
-                f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели."
-            )
+            raise gr.Error(f"Директория голосовой модели {dir_name} уже существует! Выберите другое имя для вашей голосовой модели.")
 
         os.makedirs(extraction_folder, exist_ok=True)
 
@@ -120,9 +106,7 @@ def upload_separate_files(pth_file, index_file, dir_name, progress=gr.Progress()
 
         # Копируем файл .index
         if index_file:
-            index_path = os.path.join(
-                extraction_folder, os.path.basename(index_file.name)
-            )
+            index_path = os.path.join(extraction_folder, os.path.basename(index_file.name))
             shutil.copyfile(index_file.name, index_path)
         return f"[+] Модель {dir_name} успешно загружена!"
     except Exception as e:
@@ -133,9 +117,7 @@ def upload_separate_files(pth_file, index_file, dir_name, progress=gr.Progress()
 # Основная функция для вызова из командной строки
 def main():
     if len(sys.argv) != 3:
-        print(
-            '\nИспользование:\npython3 -m rvc.modules.model_manager "url" "dir_name"\n'
-        )
+        print('\nИспользование:\npython3 -m rvc.modules.model_manager "url" "dir_name"\n')
         sys.exit(1)
 
     url = sys.argv[1]

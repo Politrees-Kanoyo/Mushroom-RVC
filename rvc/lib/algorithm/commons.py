@@ -23,15 +23,11 @@ def convert_pad_shape(pad_shape):
 
 def kl_divergence(m_p, logs_p, m_q, logs_q):
     kl = (logs_q - logs_p) - 0.5
-    kl += (
-        0.5 * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2)) * torch.exp(-2.0 * logs_q)
-    )
+    kl += 0.5 * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2)) * torch.exp(-2.0 * logs_q)
     return kl
 
 
-def slice_segments(
-    x: torch.Tensor, ids_str: torch.Tensor, segment_size: int = 4, dim: int = 2
-):
+def slice_segments(x: torch.Tensor, ids_str: torch.Tensor, segment_size: int = 4, dim: int = 2):
     if dim == 2:
         ret = torch.zeros_like(x[:, :segment_size])
     elif dim == 3:
@@ -61,12 +57,8 @@ def rand_slice_segments(x, x_lengths=None, segment_size=4):
 def get_timing_signal_1d(length, channels, min_timescale=1.0, max_timescale=1.0e4):
     position = torch.arange(length, dtype=torch.float)
     num_timescales = channels // 2
-    log_timescale_increment = math.log(float(max_timescale) / float(min_timescale)) / (
-        num_timescales - 1
-    )
-    inv_timescales = min_timescale * torch.exp(
-        torch.arange(num_timescales, dtype=torch.float) * -log_timescale_increment
-    )
+    log_timescale_increment = math.log(float(max_timescale) / float(min_timescale)) / (num_timescales - 1)
+    inv_timescales = min_timescale * torch.exp(torch.arange(num_timescales, dtype=torch.float) * -log_timescale_increment)
     scaled_time = position.unsqueeze(0) * inv_timescales.unsqueeze(1)
     signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], 0)
     signal = F.pad(signal, [0, 0, 0, channels % 2])

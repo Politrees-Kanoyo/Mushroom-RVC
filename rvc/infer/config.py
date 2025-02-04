@@ -50,10 +50,4 @@ class Config:
         # Получаем имя GPU
         self.gpu_name = torch.cuda.get_device_name(self.device)
         # Вычисляем объем памяти GPU в ГБ
-        self.gpu_mem = int(
-            torch.cuda.get_device_properties(self.device).total_memory
-            / 1024
-            / 1024
-            / 1024
-            + 0.4
-        )
+        self.gpu_mem = int(torch.cuda.get_device_properties(self.device).total_memory / 1024 / 1024 / 1024 + 0.4)

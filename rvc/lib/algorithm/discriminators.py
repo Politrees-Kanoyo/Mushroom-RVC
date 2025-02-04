@@ -17,10 +17,7 @@ class MultiPeriodDiscriminator(nn.Module):
         super(MultiPeriodDiscriminator, self).__init__()
         self.discriminators = nn.ModuleList(
             [DiscriminatorS(use_spectral_norm=use_spectral_norm)]
-            + [
-                DiscriminatorP(p, use_spectral_norm=use_spectral_norm)
-                for p in PERIODS_V1
-            ]
+            + [DiscriminatorP(p, use_spectral_norm=use_spectral_norm) for p in PERIODS_V1]
         )
 
     def forward(self, y, y_hat):
@@ -41,10 +38,7 @@ class MultiPeriodDiscriminatorV2(nn.Module):
         super(MultiPeriodDiscriminatorV2, self).__init__()
         self.discriminators = nn.ModuleList(
             [DiscriminatorS(use_spectral_norm=use_spectral_norm)]
-            + [
-                DiscriminatorP(p, use_spectral_norm=use_spectral_norm)
-                for p in PERIODS_V2
-            ]
+            + [DiscriminatorP(p, use_spectral_norm=use_spectral_norm) for p in PERIODS_V2]
         )
 
     def forward(self, y, y_hat):

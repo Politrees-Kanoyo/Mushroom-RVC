@@ -32,14 +32,10 @@ def apply_mask(tensor, mask):
 class ResBlockBase(nn.Module):
     def __init__(self, channels, kernel_size, dilations):
         super(ResBlockBase, self).__init__()
-        self.convs1 = nn.ModuleList(
-            [create_conv1d_layer(channels, kernel_size, d) for d in dilations]
-        )
+        self.convs1 = nn.ModuleList([create_conv1d_layer(channels, kernel_size, d) for d in dilations])
         self.convs1.apply(init_weights)
 
-        self.convs2 = nn.ModuleList(
-            [create_conv1d_layer(channels, kernel_size, 1) for _ in dilations]
-        )
+        self.convs2 = nn.ModuleList([create_conv1d_layer(channels, kernel_size, 1) for _ in dilations])
         self.convs2.apply(init_weights)
 
     def forward(self, x, x_mask=None):
@@ -163,10 +159,7 @@ class ResidualCouplingBlock(nn.Module):
     def __prepare_scriptable__(self):
         for i in range(self.n_flows):
             for hook in self.flows[i * 2]._forward_pre_hooks.values():
-                if (
-                    hook.__module__ == "torch.nn.utils.parametrizations.weight_norm"
-                    and hook.__class__.__name__ == "_WeightNorm"
-                ):
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                     remove_weight_norm(self.flows[i * 2])
 
         return self

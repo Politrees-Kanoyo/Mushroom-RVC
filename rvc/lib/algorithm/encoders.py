@@ -12,17 +12,7 @@ from .normalization import LayerNorm
 
 
 class Encoder(nn.Module):
-    def __init__(
-        self,
-        hidden_channels,
-        filter_channels,
-        n_heads,
-        n_layers,
-        kernel_size=1,
-        p_dropout=0.0,
-        window_size=10,
-        **kwargs
-    ):
+    def __init__(self, hidden_channels, filter_channels, n_heads, n_layers, kernel_size=1, p_dropout=0.0, window_size=10, **kwargs):
         super().__init__()
         self.hidden_channels = hidden_channels
         self.filter_channels = filter_channels
@@ -109,9 +99,7 @@ class TextEncoder(nn.Module):
         )
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
-    def forward(
-        self, phone: torch.Tensor, pitch: Optional[torch.Tensor], lengths: torch.Tensor
-    ):
+    def forward(self, phone: torch.Tensor, pitch: Optional[torch.Tensor], lengths: torch.Tensor):
         if pitch is None:
             x = self.emb_phone(phone)
         else:
@@ -157,9 +145,7 @@ class PosteriorEncoder(nn.Module):
         )
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
-    def forward(
-        self, x: torch.Tensor, x_lengths: torch.Tensor, g: Optional[torch.Tensor] = None
-    ):
+    def forward(self, x: torch.Tensor, x_lengths: torch.Tensor, g: Optional[torch.Tensor] = None):
         x_mask = torch.unsqueeze(sequence_mask(x_lengths, x.size(2)), 1).to(x.dtype)
         x = self.pre(x) * x_mask
         x = self.enc(x, x_mask, g=g)
@@ -173,9 +159,6 @@ class PosteriorEncoder(nn.Module):
 
     def __prepare_scriptable__(self):
         for hook in self.enc._forward_pre_hooks.values():
-            if (
-                hook.__module__ == "torch.nn.utils.parametrizations.weight_norm"
-                and hook.__class__.__name__ == "_WeightNorm"
-            ):
+            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                 remove_weight_norm(self.enc)
         return self
