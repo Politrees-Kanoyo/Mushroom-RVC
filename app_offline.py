@@ -71,9 +71,7 @@ if __name__ == "__main__":
             launch(port)
             break
         except OSError:
-            print(
-                f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}..."
-            )
+            print(f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}...")
             port -= 1
         except Exception as error:
             print(f"Произошла ошибка при запуске Gradio: {error}")

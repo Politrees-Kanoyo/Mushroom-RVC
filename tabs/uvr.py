@@ -181,27 +181,13 @@ def rename_stems(
 ):
     base_name = os.path.splitext(os.path.basename(audio))[0]
     stems = {
-        "Vocals": vocals_stem.replace("NAME", base_name)
-        .replace("STEM", "Vocals")
-        .replace("MODEL", model),
-        "Instrumental": instrumental_stem.replace("NAME", base_name)
-        .replace("STEM", "Instrumental")
-        .replace("MODEL", model),
-        "Drums": drums_stem.replace("NAME", base_name)
-        .replace("STEM", "Drums")
-        .replace("MODEL", model),
-        "Bass": bass_stem.replace("NAME", base_name)
-        .replace("STEM", "Bass")
-        .replace("MODEL", model),
-        "Other": other_stem.replace("NAME", base_name)
-        .replace("STEM", "Other")
-        .replace("MODEL", model),
-        "Guitar": guitar_stem.replace("NAME", base_name)
-        .replace("STEM", "Guitar")
-        .replace("MODEL", model),
-        "Piano": piano_stem.replace("NAME", base_name)
-        .replace("STEM", "Piano")
-        .replace("MODEL", model),
+        "Vocals": vocals_stem.replace("NAME", base_name).replace("STEM", "Vocals").replace("MODEL", model),
+        "Instrumental": instrumental_stem.replace("NAME", base_name).replace("STEM", "Instrumental").replace("MODEL", model),
+        "Drums": drums_stem.replace("NAME", base_name).replace("STEM", "Drums").replace("MODEL", model),
+        "Bass": bass_stem.replace("NAME", base_name).replace("STEM", "Bass").replace("MODEL", model),
+        "Other": other_stem.replace("NAME", base_name).replace("STEM", "Other").replace("MODEL", model),
+        "Guitar": guitar_stem.replace("NAME", base_name).replace("STEM", "Guitar").replace("MODEL", model),
+        "Piano": piano_stem.replace("NAME", base_name).replace("STEM", "Piano").replace("MODEL", model),
     }
     return stems
 
@@ -225,13 +211,9 @@ def leaderboard(list_filter, list_limit):
             "<table border='1'>"
             + "".join(
                 f"<tr style='{'font-weight: bold; font-size: 1.2em;' if i == 0 else ''}'>"
-                + "".join(
-                    f"<td>{cell}</td>" for cell in re.split(r"\s{2,}", line.strip())
-                )
+                + "".join(f"<td>{cell}</td>" for cell in re.split(r"\s{2,}", line.strip()))
                 + "</tr>"
-                for i, line in enumerate(
-                    re.findall(r"^(?!-+)(.+)$", result.stdout.strip(), re.MULTILINE)
-                )
+                for i, line in enumerate(re.findall(r"^(?!-+)(.+)$", result.stdout.strip(), re.MULTILINE))
             )
             + "</table>"
         )
@@ -682,12 +664,8 @@ def poluvr_tab():
         with gr.Row():
             roformer_button = gr.Button("Разделить!", variant="primary")
         with gr.Row():
-            roformer_stem1 = gr.Audio(
-                label="Стем 1", type="filepath", interactive=False
-            )
-            roformer_stem2 = gr.Audio(
-                label="Стем 2", type="filepath", interactive=False
-            )
+            roformer_stem1 = gr.Audio(label="Стем 1", type="filepath", interactive=False)
+            roformer_stem2 = gr.Audio(label="Стем 2", type="filepath", interactive=False)
 
     with gr.Tab("MDX23C"):
         with gr.Group():
@@ -1148,18 +1126,12 @@ def poluvr_tab():
         inputs=[roformer_override_seg_size],
         outputs=[roformer_seg_size],
     )
-    mdx23c_override_seg_size.change(
-        show_hide_params, inputs=[mdx23c_override_seg_size], outputs=[mdx23c_seg_size]
-    )
-    vr_post_process.change(
-        show_hide_params, inputs=[vr_post_process], outputs=[vr_post_process_threshold]
-    )
+    mdx23c_override_seg_size.change(show_hide_params, inputs=[mdx23c_override_seg_size], outputs=[mdx23c_seg_size])
+    vr_post_process.change(show_hide_params, inputs=[vr_post_process], outputs=[vr_post_process_threshold])
 
     demucs_model.change(update_stems, inputs=[demucs_model], outputs=stem6)
 
-    list_button.click(
-        leaderboard, inputs=[list_filter, list_limit], outputs=output_list
-    )
+    list_button.click(leaderboard, inputs=[list_filter, list_limit], outputs=output_list)
 
     roformer_button.click(
         roformer_separator,

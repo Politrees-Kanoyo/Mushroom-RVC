@@ -37,13 +37,9 @@ def load_rvc_model(rvc_model):
     model_files = os.listdir(model_dir)
 
     # Находим файл модели с расширением .pth
-    rvc_model_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".pth")), None
-    )
+    rvc_model_path = next((os.path.join(model_dir, f) for f in model_files if f.endswith(".pth")), None)
     # Находим файл индекса с расширением .index
-    rvc_index_path = next(
-        (os.path.join(model_dir, f) for f in model_files if f.endswith(".index")), None
-    )
+    rvc_index_path = next((os.path.join(model_dir, f) for f in model_files if f.endswith(".index")), None)
 
     # Проверяем, существует ли файл модели
     if not rvc_model_path:
@@ -56,9 +52,7 @@ def load_rvc_model(rvc_model):
 
 # Загружает модель Hubert
 def load_hubert(model_path):
-    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
-        [model_path], suffix=""
-    )
+    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task([model_path], suffix="")
     hubert = models[0].to(config.device)
     hubert = hubert.float()
     hubert.eval()
@@ -72,9 +66,7 @@ def get_vc(model_path):
 
     # Проверяем корректность формата модели
     if "config" not in cpt or "weight" not in cpt:
-        raise ValueError(
-            f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную на RVC v2."
-        )
+        raise ValueError(f"Некорректный формат для {model_path}. Используйте голосовую модель, обученную на RVC v2.")
 
     # Извлекаем параметры модели
     tgt_sr = cpt["config"][-1]

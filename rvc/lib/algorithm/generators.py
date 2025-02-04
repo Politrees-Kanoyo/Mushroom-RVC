@@ -25,9 +25,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
-        self.conv_pre = nn.Conv1d(
-            initial_channel, upsample_initial_channel, 7, 1, padding=3
-        )
+        self.conv_pre = nn.Conv1d(initial_channel, upsample_initial_channel, 7, 1, padding=3)
         resblock = ResBlock1 if resblock == "1" else ResBlock2
 
         self.ups_and_resblocks = nn.ModuleList()
@@ -44,9 +42,7 @@ class Generator(nn.Module):
                 )
             )
             ch = upsample_initial_channel // (2 ** (i + 1))
-            for j, (k, d) in enumerate(
-                zip(resblock_kernel_sizes, resblock_dilation_sizes)
-            ):
+            for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.ups_and_resblocks.append(resblock(ch, k, d))
 
         self.conv_post = nn.Conv1d(ch, 1, 7, 1, padding=3, bias=False)
@@ -80,10 +76,7 @@ class Generator(nn.Module):
     def __prepare_scriptable__(self):
         for l in self.ups_and_resblocks:
             for hook in l._forward_pre_hooks.values():
-                if (
-                    hook.__module__ == "torch.nn.utils.parametrizations.weight_norm"
-                    and hook.__class__.__name__ == "_WeightNorm"
-                ):
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                     remove_weight_norm(l)
         return self
 
@@ -120,16 +113,9 @@ class SineGen(nn.Module):
             f0 = f0[:, None].transpose(1, 2)
             f0_buf = torch.zeros(f0.shape[0], f0.shape[1], self.dim, device=f0.device)
             f0_buf[:, :, 0] = f0[:, :, 0]
-            f0_buf[:, :, 1:] = (
-                f0_buf[:, :, 0:1]
-                * torch.arange(2, self.harmonic_num + 2, device=f0.device)[
-                    None, None, :
-                ]
-            )
+            f0_buf[:, :, 1:] = f0_buf[:, :, 0:1] * torch.arange(2, self.harmonic_num + 2, device=f0.device)[None, None, :]
             rad_values = (f0_buf / float(self.sample_rate)) % 1
-            rand_ini = torch.rand(
-                f0_buf.shape[0], f0_buf.shape[2], device=f0_buf.device
-            )
+            rand_ini = torch.rand(f0_buf.shape[0], f0_buf.shape[2], device=f0_buf.device)
             rand_ini[:, 0] = 0
             rad_values[:, 0, :] = rad_values[:, 0, :] + rand_ini
             tmp_over_one = torch.cumsum(rad_values, 1)
@@ -140,21 +126,15 @@ class SineGen(nn.Module):
                 mode="linear",
                 align_corners=True,
             ).transpose(2, 1)
-            rad_values = F.interpolate(
-                rad_values.transpose(2, 1), scale_factor=float(upp), mode="nearest"
-            ).transpose(2, 1)
+            rad_values = F.interpolate(rad_values.transpose(2, 1), scale_factor=float(upp), mode="nearest").transpose(2, 1)
             tmp_over_one %= 1
             tmp_over_one_idx = (tmp_over_one[:, 1:, :] - tmp_over_one[:, :-1, :]) < 0
             cumsum_shift = torch.zeros_like(rad_values)
             cumsum_shift[:, 1:, :] = tmp_over_one_idx * -1.0
-            sine_waves = torch.sin(
-                torch.cumsum(rad_values + cumsum_shift, dim=1) * 2 * torch.pi
-            )
+            sine_waves = torch.sin(torch.cumsum(rad_values + cumsum_shift, dim=1) * 2 * torch.pi)
             sine_waves = sine_waves * self.sine_amp
             uv = self._f02uv(f0)
-            uv = F.interpolate(
-                uv.transpose(2, 1), scale_factor=float(upp), mode="nearest"
-            ).transpose(2, 1)
+            uv = F.interpolate(uv.transpose(2, 1), scale_factor=float(upp), mode="nearest").transpose(2, 1)
             noise_amp = uv * self.noise_std + (1 - uv) * self.sine_amp / 3
             noise = noise_amp * torch.randn_like(sine_waves)
             sine_waves = sine_waves * uv + noise

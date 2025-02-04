@@ -8,11 +8,7 @@ OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
 
 def get_folders(models_dir):
-    folders = [
-        item
-        for item in os.listdir(models_dir)
-        if os.path.isdir(os.path.join(models_dir, item))
-    ]
+    folders = [item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))]
     # Сортируем список папок
     folders.sort(key=lambda x: (x.isdigit(), x.lower()))
     return folders
@@ -217,23 +213,13 @@ def inference_tab():
                         )
 
     # Загрузка файлов
-    local_file.input(
-        process_file_upload, inputs=[local_file], outputs=[song_input, local_file]
-    )
+    local_file.input(process_file_upload, inputs=[local_file], outputs=[song_input, local_file])
 
     # Обновление кнопок
-    show_upload_button.click(
-        swap_visibility, outputs=[upload_file, enter_local_file, song_input, local_file]
-    )
-    show_enter_button.click(
-        swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file]
-    )
-    show_upload_button.click(
-        swap_buttons, outputs=[show_upload_button, show_enter_button]
-    )
-    show_enter_button.click(
-        swap_buttons, outputs=[show_enter_button, show_upload_button]
-    )
+    show_upload_button.click(swap_visibility, outputs=[upload_file, enter_local_file, song_input, local_file])
+    show_enter_button.click(swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file])
+    show_upload_button.click(swap_buttons, outputs=[show_upload_button, show_enter_button])
+    show_enter_button.click(swap_buttons, outputs=[show_enter_button, show_upload_button])
 
     # Показать hop_length
     f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)

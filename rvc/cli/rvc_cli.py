@@ -3,9 +3,7 @@ import os
 
 from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
 
-parser = argparse.ArgumentParser(
-    description="Замена голоса в директории output/", add_help=True
-)
+parser = argparse.ArgumentParser(description="Замена голоса в директории output/", add_help=True)
 parser.add_argument("-i", "--input_path", type=str, required=True)
 parser.add_argument("-m", "--model_name", type=str, required=True)
 parser.add_argument("-p", "--pitch", type=float, required=True)

@@ -5,11 +5,7 @@ import urllib.request
 
 import gradio as gr
 
-from rvc.modules.model_manager import (
-    download_from_url,
-    upload_separate_files,
-    upload_zip_file,
-)
+from rvc.modules.model_manager import download_from_url, upload_separate_files, upload_zip_file
 
 embedders_dir = os.path.join(os.getcwd(), "rvc", "models", "embedders")
 hubert_base_path = os.path.join(embedders_dir, "hubert_base.pt")
@@ -32,9 +28,7 @@ def toggle_custom_url(checkbox_value):
     if checkbox_value:
         return gr.update(visible=True, value=""), gr.update(visible=False, value=None)
     else:
-        return gr.update(visible=False, value=""), gr.update(
-            visible=True, value="hubert_base.pt"
-        )
+        return gr.update(visible=False, value=""), gr.update(visible=True, value="hubert_base.pt")
 
 
 def output_message():
@@ -106,9 +100,7 @@ def zip_upload(output_message):
     with gr.Accordion("Загрузить ZIP-файл", open=False):
         with gr.Column():
             with gr.Group():
-                zip_file = gr.File(
-                    label="Zip-файл", file_types=[".zip"], file_count="single"
-                )
+                zip_file = gr.File(label="Zip-файл", file_types=[".zip"], file_count="single")
                 model_name = gr.Text(
                     label="Имя модели",
                     info="Дайте вашей загружаемой модели уникальное имя, отличное от других голосовых моделей.",
@@ -127,12 +119,8 @@ def files_upload(output_message):
         with gr.Column():
             with gr.Group():
                 with gr.Row(equal_height=False):
-                    pth_file = gr.File(
-                        label="pth-файл", file_types=[".pth"], file_count="single"
-                    )
-                    index_file = gr.File(
-                        label="index-файл", file_types=[".index"], file_count="single"
-                    )
+                    pth_file = gr.File(label="pth-файл", file_types=[".pth"], file_count="single")
+                    index_file = gr.File(label="index-файл", file_types=[".index"], file_count="single")
                 model_name = gr.Text(
                     label="Имя модели",
                     info="Дайте вашей загружаемой модели уникальное имя, отличное от других голосовых моделей.",
@@ -152,13 +140,9 @@ def install_hubert_tab():
     )
     with gr.Row(variant="panel", equal_height=True):
         with gr.Column(variant="panel"):
-            custom_url_checkbox = gr.Checkbox(
-                label="Использовать другой HuBERT", value=False
-            )
+            custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
             custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
-            hubert_model_dropdown = gr.Dropdown(
-                models, label="Список доступных HuBERT моделей:", visible=True
-            )
+            hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
         hubert_download_btn = gr.Button("Установить!", variant="primary")
     hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
 

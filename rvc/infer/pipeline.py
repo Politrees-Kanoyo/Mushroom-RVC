@@ -50,10 +50,7 @@ class AudioProcessor:
         ).squeeze()
         rms2 = torch.maximum(rms2, torch.zeros_like(rms2) + 1e-6)
 
-        adjusted_audio = (
-            target_audio
-            * (torch.pow(rms1, 1 - rate) * torch.pow(rms2, rate - 1)).numpy()
-        )
+        adjusted_audio = target_audio * (torch.pow(rms1, 1 - rate) * torch.pow(rms2, rate - 1)).numpy()
         return adjusted_audio
 
 
@@ -173,22 +170,14 @@ class VC:
         f0 *= pow(2, pitch / 12)
         tf0 = self.sample_rate // self.window
         if inp_f0 is not None:
-            delta_t = np.round(
-                (inp_f0[:, 0].max() - inp_f0[:, 0].min()) * tf0 + 1
-            ).astype("int16")
-            replace_f0 = np.interp(
-                list(range(delta_t)), inp_f0[:, 0] * 100, inp_f0[:, 1]
-            )
+            delta_t = np.round((inp_f0[:, 0].max() - inp_f0[:, 0].min()) * tf0 + 1).astype("int16")
+            replace_f0 = np.interp(list(range(delta_t)), inp_f0[:, 0] * 100, inp_f0[:, 1])
             shape = f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)].shape[0]
-            f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)] = replace_f0[
-                :shape
-            ]
+            f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)] = replace_f0[:shape]
 
         f0bak = f0.copy()
         f0_mel = 1127 * np.log(1 + f0 / 700)
-        f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (
-            f0_mel_max - f0_mel_min
-        ) + 1
+        f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (f0_mel_max - f0_mel_min) + 1
         f0_mel[f0_mel <= 1] = 1
         f0_mel[f0_mel > 255] = 255
         f0_coarse = np.rint(f0_mel).astype(int)
@@ -235,16 +224,11 @@ class VC:
             weight = np.square(1 / score)
             weight /= weight.sum(axis=1, keepdims=True)
             npy = np.sum(big_npy[ix] * np.expand_dims(weight, axis=2), axis=1)
-            feats = (
-                torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate
-                + (1 - index_rate) * feats
-            )
+            feats = torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate + (1 - index_rate) * feats
 
         feats = F.interpolate(feats.permute(0, 2, 1), scale_factor=2).permute(0, 2, 1)
         if protect < 0.5 and pitch is not None and pitchf is not None:
-            feats0 = F.interpolate(feats0.permute(0, 2, 1), scale_factor=2).permute(
-                0, 2, 1
-            )
+            feats0 = F.interpolate(feats0.permute(0, 2, 1), scale_factor=2).permute(0, 2, 1)
         p_len = audio0.shape[0] // self.window
         if feats.shape[1] < p_len:
             p_len = feats.shape[1]
@@ -262,16 +246,9 @@ class VC:
         p_len = torch.tensor([p_len], device=self.device).long()
         with torch.no_grad():
             if pitch is not None and pitchf is not None:
-                audio1 = (
-                    (net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0])
-                    .data.cpu()
-                    .float()
-                    .numpy()
-                )
+                audio1 = (net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0]).data.cpu().float().numpy()
             else:
-                audio1 = (
-                    (net_g.infer(feats, p_len, sid)[0][0, 0]).data.cpu().float().numpy()
-                )
+                audio1 = (net_g.infer(feats, p_len, sid)[0][0, 0]).data.cpu().float().numpy()
         del feats, p_len, padding_mask
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -303,12 +280,7 @@ class VC:
         """
         Основной конвейер для преобразования аудио.
         """
-        if (
-            file_index is not None
-            and file_index != ""
-            and os.path.exists(file_index)
-            and index_rate != 0
-        ):
+        if file_index is not None and file_index != "" and os.path.exists(file_index) and index_rate != 0:
             try:
                 index = faiss.read_index(file_index)
                 big_npy = index.reconstruct_n(0, index.ntotal)
@@ -439,13 +411,9 @@ class VC:
 
         audio_opt = np.concatenate(audio_opt)
         if volume_envelope != 1:
-            audio_opt = AudioProcessor.change_rms(
-                audio, self.sample_rate, audio_opt, tgt_sr, volume_envelope
-            )
+            audio_opt = AudioProcessor.change_rms(audio, self.sample_rate, audio_opt, tgt_sr, volume_envelope)
         if resample_sr >= self.sample_rate and tgt_sr != resample_sr:
-            audio_opt = librosa.resample(
-                audio_opt, orig_sr=tgt_sr, target_sr=resample_sr
-            )
+            audio_opt = librosa.resample(audio_opt, orig_sr=tgt_sr, target_sr=resample_sr)
 
         audio_max = np.abs(audio_opt).max() / 0.99
         max_int16 = 32768

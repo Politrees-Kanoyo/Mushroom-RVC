@@ -9,13 +9,7 @@ configure_logging()
 
 from tabs.edge_tts import edge_tts_tab
 from tabs.inference import inference_tab
-from tabs.install import (
-    files_upload,
-    install_hubert_tab,
-    output_message,
-    url_zip_download,
-    zip_upload,
-)
+from tabs.install import files_upload, install_hubert_tab, output_message, url_zip_download, zip_upload
 from tabs.uvr import poluvr_tab
 from tabs.welcome import welcome_tab
 
@@ -82,9 +76,7 @@ if __name__ == "__main__":
             launch(port)
             break
         except OSError:
-            print(
-                f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}..."
-            )
+            print(f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}...")
             port -= 1
         except Exception as error:
             print(f"Произошла ошибка при запуске Gradio: {error}")

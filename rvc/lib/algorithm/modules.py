@@ -47,9 +47,7 @@ class WaveNet(nn.Module):
             in_layer = weight_norm(in_layer, name="weight")
             self.in_layers.append(in_layer)
 
-            res_skip_channels = (
-                hidden_channels if i == n_layers - 1 else 2 * hidden_channels
-            )
+            res_skip_channels = hidden_channels if i == n_layers - 1 else 2 * hidden_channels
 
             res_skip_layer = nn.Conv1d(hidden_channels, res_skip_channels, 1)
             res_skip_layer = weight_norm(res_skip_layer, name="weight")
