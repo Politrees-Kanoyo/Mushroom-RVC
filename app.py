@@ -1,7 +1,7 @@
 import os
 import sys
-
 import gradio as gr
+from typing import Any
 
 from assets.logging_config import configure_logging
 
@@ -13,6 +13,7 @@ from tabs.install import files_upload, install_hubert_tab, output_message, url_z
 from tabs.uvr import poluvr_tab
 from tabs.welcome import welcome_tab
 
+DEFAULT_SERVER_NAME = "127.0.0.1"
 DEFAULT_PORT = 4000
 MAX_PORT_ATTEMPTS = 10
 
@@ -52,28 +53,32 @@ with gr.Blocks(
             install_hubert_tab()
 
 
-def launch(port):
+def launch_gradio(server_name: str, server_port: int) -> None:
     PolGen.launch(
-        favicon_path=os.path.join(os.getcwd(), "assets", "logo.ico"),
+        favicon_path="assets/logo.ico",
         share="--share" in sys.argv,
         inbrowser="--open" in sys.argv,
-        server_port=port,
+        server_name=server_name,
+        server_port=server_port,
+        show_error=True,
     )
 
 
-def get_port_from_args():
-    if "--port" in sys.argv:
-        port_index = sys.argv.index("--port") + 1
-        if port_index < len(sys.argv):
-            return int(sys.argv[port_index])
-    return DEFAULT_PORT
+def get_value_from_args(key: str, default: Any = None) -> Any:
+    if key in sys.argv:
+        index = sys.argv.index(key) + 1
+        if index < len(sys.argv):
+            return sys.argv[index]
+    return default
 
 
 if __name__ == "__main__":
-    port = get_port_from_args()
+    port = int(get_value_from_args("--port", DEFAULT_PORT))
+    server = get_value_from_args("--server-name", DEFAULT_SERVER_NAME)
+
     for _ in range(MAX_PORT_ATTEMPTS):
         try:
-            launch(port)
+            launch_gradio(server, port)
             break
         except OSError:
             print(f"Не удалось запустить на порту {port}, повторите попытку на порту {port - 1}...")
