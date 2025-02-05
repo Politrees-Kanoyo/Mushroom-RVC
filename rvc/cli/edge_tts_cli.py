@@ -19,14 +19,8 @@ parser.add_argument("-f0max", "--f0_max", type=int, default="1100")
 parser.add_argument("-f", "--format", type=str, default="mp3")
 args = parser.parse_args()
 
-model_name = args.model_name
-if not os.path.exists(os.path.join(RVC_MODELS_DIR, model_name)):
-    raise Exception(
-        f"\033[91mОШИБКА!\033[0m Модель {model_name} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
-    )
-
 output_path = rvc_infer(
-    voice_rvc=model_name,
+    voice_rvc=args.model_name,
     voice_tts=args.tts_voice,
     input_audio=None,
     input_text=args.text_input,
