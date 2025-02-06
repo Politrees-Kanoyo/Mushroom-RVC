@@ -1,6 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 title PolGen Installer
+cd /d "%~dp0"
 
 echo Welcome to the PolGen Installer!
 echo.
@@ -17,8 +18,9 @@ call :install_dependencies
 call :download_ffmpeg
 call :installing_necessary_models
 
+cls
 echo PolGen has been installed successfully!
-echo To start PolGen, please run 'PolGen.exe'.
+echo To start PolGen, please run 'run-PolGen.bat'.
 echo.
 pause
 exit /b 0
@@ -42,6 +44,7 @@ echo.
 exit /b 0
 
 :create_conda_env
+cls
 echo Creating Conda environment...
 call "%MINICONDA_DIR%\_conda.exe" create --no-shortcuts -y -k --prefix "%ENV_DIR%" python=3.10
 if errorlevel 1 goto :error
@@ -49,6 +52,7 @@ echo Conda environment created successfully.
 echo.
 
 if exist "%ENV_DIR%\python.exe" (
+	cls
     echo Installing specific pip version...
     "%ENV_DIR%\python.exe" -m pip install "pip<24.1"
     if errorlevel 1 goto :error
@@ -58,6 +62,7 @@ if exist "%ENV_DIR%\python.exe" (
 exit /b 0
 
 :install_dependencies
+cls
 echo Installing dependencies...
 call "%MINICONDA_DIR%\condabin\conda.bat" activate "%ENV_DIR%" || goto :error
 pip install --upgrade setuptools || goto :error
@@ -69,6 +74,15 @@ echo.
 exit /b 0
 
 :download_ffmpeg
+cls
+echo Checking for ffmpeg and ffprobe...
+if exist "%PRINCIPAL%\ffmpeg.exe" (
+    if exist "%PRINCIPAL%\ffprobe.exe" (
+        echo ffmpeg and ffprobe already exist. Skipping download.
+        exit /b 0
+    )
+)
+
 echo Downloading ffmpeg and ffprobe...
 powershell -Command "& {Invoke-WebRequest -Uri 'https://huggingface.co/Politrees/RVC_resources/resolve/main/tools/ffmpeg/ffmpeg.exe?download=true' -OutFile 'ffmpeg.exe'}"
 if not exist "ffmpeg.exe" goto :download_error
@@ -81,6 +95,7 @@ echo.
 exit /b 0
 
 :installing_necessary_models
+cls
 echo Checking for required models...
 set "hubert_base=%PRINCIPAL%\rvc\models\embedders\hubert_base.pt"
 set "fcpe=%PRINCIPAL%\rvc\models\predictors\fcpe.pt"

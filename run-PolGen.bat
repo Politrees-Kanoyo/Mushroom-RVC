@@ -1,63 +1,68 @@
 @echo off
 setlocal enabledelayedexpansion
 title PolGen
+cd /d "%~dp0"
 
-if not exist env (
-    echo Please run 'run-install.bat' first to set up the environment.
+if not exist env\python.exe (
+    echo Error: Virtual environment not found or incomplete.
+    echo Please run 'run-PolGen-installer.bat' first to set up the environment.
     pause
     exit /b 1
 )
 
+set PYTHON=env\python.exe
+set ONLINE_SCRIPT=app.py
+set OFFLINE_SCRIPT=app_offline.py
+
 call :check_internet_connection
-call :installing_necessary_models
 call :running_interface
+exit /b 0
 
 :check_internet_connection
 echo Checking internet connection...
-ping -n 1 google.com >nul 2>&1
-if errorlevel 1 (
-    echo No internet connection detected.
-    set "INTERNET_AVAILABLE=0"
-) else (
-    echo Internet connection is available.
+powershell -Command "Test-Connection -ComputerName 8.8.8.8 -Count 1 -Quiet" >nul 2>&1 && (
+    echo Connection to 8.8.8.8 successful
     set "INTERNET_AVAILABLE=1"
+    goto :check_end
 )
-echo.
-exit /b 0
-
-:installing_necessary_models
-echo Checking for required models...
-set "hubert_base=%cd%\rvc\models\embedders\hubert_base.pt"
-set "fcpe=%cd%\rvc\models\predictors\fcpe.pt"
-set "rmvpe=%cd%\rvc\models\predictors\rmvpe.pt"
-
-if exist "%hubert_base%" (
-    if exist "%fcpe%" (
-        if exist "%rmvpe%" (
-            echo All required models are installed.
-        )
-    )
-) else (
-    echo Required models were not found. Installing models...
-    echo.
-    env\python download_models.py
-    if errorlevel 1 goto :error
+powershell -Command "Test-Connection -ComputerName microsoft.com -Count 1 -Quiet" >nul 2>&1 && (
+    echo Connection to microsoft.com successful
+    set "INTERNET_AVAILABLE=1"
+    goto :check_end
 )
+echo No internet connection detected
+set "INTERNET_AVAILABLE=0"
+:check_end
 echo.
 exit /b 0
 
 :running_interface
-echo Running Interface...
-if "%INTERNET_AVAILABLE%"=="1" (
-    echo Running app.py...
-    env\python app.py --open
-) else (
-    echo Running app_offline.py...
-    env\python app_offline.py --open
+cls
+echo ==== Starting Application ====
+
+if not exist %ONLINE_SCRIPT% (
+    echo Critical Error: Main script %ONLINE_SCRIPT% not found!
+    pause
+    exit /b 1
 )
 
-:error
-echo.
-echo An error occurred during the process. Exiting the script...
-pause
-exit /b 1
+if "%INTERNET_AVAILABLE%"=="0" (
+    if not exist %OFFLINE_SCRIPT% (
+        echo Critical Error: Offline script %OFFLINE_SCRIPT% not found!
+        pause
+        exit /b 1
+    )
+    echo Starting in OFFLINE mode...
+    %PYTHON% %OFFLINE_SCRIPT% --open
+) else (
+    echo Starting in ONLINE mode...
+    %PYTHON% %ONLINE_SCRIPT% --open
+)
+
+if errorlevel 1 (
+    echo Error: Application failed to start (Error code: %errorlevel%)
+    pause
+    exit /b 1
+)
+
+exit /b 0
