@@ -63,7 +63,7 @@ def update_models_list():
 
 
 def show_hop_slider(pitch_detection_algo):
-    if pitch_detection_algo in ["mangio-crepe"]:
+    if pitch_detection_algo in ["crepe", "crepe-tiny"]:
         return gr.update(visible=True)
     else:
         return gr.update(visible=False)
@@ -147,9 +147,9 @@ def edge_tts_tab():
                 with gr.Group():
                     with gr.Column():
                         f0_method = gr.Dropdown(
-                            value="rmvpe+",
+                            value="rmvpe",
                             label="Метод выделения тона",
-                            choices=["rmvpe+", "fcpe", "mangio-crepe"],
+                            choices=["rmvpe", "fcpe", "crepe", "crepe-tiny"],
                             interactive=True,
                             visible=True,
                         )

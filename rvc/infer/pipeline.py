@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 import torchcrepe
 from scipy import signal
+from torch import Tensor
 
 from rvc.lib.predictors.FCPE import FCPEF0Predictor
 from rvc.lib.predictors.RMVPE import RMVPE0Predictor
@@ -22,11 +23,13 @@ bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 
 # Класс для обработки аудио
 class AudioProcessor:
-    @staticmethod
-    def change_rms(source_audio, source_rate, target_audio, target_rate, rate):
-        """
-        Изменяет RMS (среднеквадратичное значение) аудио.
-        """
+    def change_rms(
+        source_audio: np.ndarray,
+        source_rate: int,
+        target_audio: np.ndarray,
+        target_rate: int,
+        rate: float,
+    ):
         rms1 = librosa.feature.rms(
             y=source_audio,
             frame_length=source_rate // 2 * 2,
@@ -74,6 +77,7 @@ class VC:
         self.t_max = self.sample_rate * self.x_max
         self.time_step = self.window / self.sample_rate * 1000
         self.device = config.device
+        self.model_rmvpe = RMVPE0Predictor(RMVPE_DIR, device=self.device)
 
     def get_f0_crepe(self, x, f0_min, f0_max, p_len, hop_length, model="full"):
         """
@@ -81,11 +85,12 @@ class VC:
         """
         x = x.astype(np.float32)
         x /= np.quantile(np.abs(x), 0.999)
-        audio = torch.from_numpy(x).to(self.device, copy=True).unsqueeze(0)
+        audio = torch.from_numpy(x).to(self.device, copy=True)
+        audio = torch.unsqueeze(audio, dim=0)
         if audio.ndim == 2 and audio.shape[0] > 1:
-            audio = torch.mean(audio, dim=0, keepdim=True)
-
-        pitch = torchcrepe.predict(
+            audio = torch.mean(audio, dim=0, keepdim=True).detach()
+        audio = audio.detach()
+        pitch: Tensor = torchcrepe.predict(
             audio,
             self.sample_rate,
             hop_length,
@@ -96,7 +101,6 @@ class VC:
             device=self.device,
             pad=True,
         )
-
         p_len = p_len or x.shape[0] // hop_length
         source = np.array(pitch.squeeze(0).cpu().float().numpy())
         source[source < 0.001] = np.nan
@@ -106,15 +110,6 @@ class VC:
             source,
         )
         f0 = np.nan_to_num(target)
-        return f0
-
-    def get_f0_rmvpe(self, x, f0_min=1, f0_max=40000, *args, **kwargs):
-        """
-        Получает F0 с использованием модели rmvpe.
-        """
-        if not hasattr(self, "model_rmvpe"):
-            self.model_rmvpe = RMVPE0Predictor(RMVPE_DIR, device=self.device)
-        f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         return f0
 
     def get_f0(
@@ -136,23 +131,12 @@ class VC:
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
 
-        if f0_method == "mangio-crepe":
+        if f0_method == "crepe":
             f0 = self.get_f0_crepe(x, f0_min, f0_max, p_len, int(hop_length))
-
-        elif f0_method == "rmvpe+":
-            params = {
-                "x": x,
-                "p_len": p_len,
-                "pitch": pitch,
-                "f0_min": f0_min,
-                "f0_max": f0_max,
-                "time_step": self.time_step,
-                "filter_radius": filter_radius,
-                "crepe_hop_length": int(hop_length),
-                "model": "full",
-            }
-            f0 = self.get_f0_rmvpe(**params)
-
+        elif f0_method == "crepe-tiny":
+            f0 = self.get_f0_crepe(x, f0_min, f0_max, p_len, int(hop_length), "tiny")
+        elif f0_method == "rmvpe":
+            f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         elif f0_method == "fcpe":
             self.model_fcpe = FCPEF0Predictor(
                 FCPE_DIR,
@@ -174,13 +158,13 @@ class VC:
             replace_f0 = np.interp(list(range(delta_t)), inp_f0[:, 0] * 100, inp_f0[:, 1])
             shape = f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)].shape[0]
             f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)] = replace_f0[:shape]
-
         f0bak = f0.copy()
         f0_mel = 1127 * np.log(1 + f0 / 700)
         f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (f0_mel_max - f0_mel_min) + 1
         f0_mel[f0_mel <= 1] = 1
         f0_mel[f0_mel > 255] = 255
         f0_coarse = np.rint(f0_mel).astype(int)
+
         return f0_coarse, f0bak
 
     def vc(
@@ -246,13 +230,24 @@ class VC:
         p_len = torch.tensor([p_len], device=self.device).long()
         with torch.no_grad():
             if pitch is not None and pitchf is not None:
-                audio1 = (net_g.infer(feats, p_len, pitch, pitchf, sid)[0][0, 0]).data.cpu().float().numpy()
+                audio1 = (net_g.infer(feats.float(), p_len, pitch, pitchf.float(), sid)[0][0, 0]).data.cpu().float().numpy()
             else:
-                audio1 = (net_g.infer(feats, p_len, sid)[0][0, 0]).data.cpu().float().numpy()
+                audio1 = (net_g.infer(feats.float(), p_len, sid)[0][0, 0]).data.cpu().float().numpy()
         del feats, p_len, padding_mask
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         return audio1
+    
+    """ - на будущее
+    def _retrieve_speaker_embeddings(self, feats, index, big_npy, index_rate):
+        npy = feats[0].cpu().numpy()
+        score, ix = index.search(npy, k=8)
+        weight = np.square(1 / score)
+        weight /= weight.sum(axis=1, keepdims=True)
+        npy = np.sum(big_npy[ix] * np.expand_dims(weight, axis=2), axis=1)
+        feats = torch.from_numpy(npy).unsqueeze(0).to(self.device) * index_rate + (1 - index_rate) * feats
+        return feats
+    """
 
     def pipeline(
         self,
@@ -267,8 +262,6 @@ class VC:
         index_rate,
         pitch_guidance,
         filter_radius,
-        tgt_sr,
-        resample_sr,
         volume_envelope,
         version,
         protect,
@@ -284,8 +277,8 @@ class VC:
             try:
                 index = faiss.read_index(file_index)
                 big_npy = index.reconstruct_n(0, index.ntotal)
-            except Exception as e:
-                print(f"Произошла ошибка при чтении индекса FAISS: {e}")
+            except Exception as error:
+                print(f"Произошла ошибка при чтении индекса FAISS: {error}")
                 index = big_npy = None
         else:
             index = big_npy = None
@@ -311,16 +304,16 @@ class VC:
         audio_pad = np.pad(audio, (self.t_pad, self.t_pad), mode="reflect")
         p_len = audio_pad.shape[0] // self.window
         inp_f0 = None
-        if f0_file and hasattr(f0_file, "name"):
+        if hasattr(f0_file, "name"):
             try:
                 with open(f0_file.name, "r") as f:
                     lines = f.read().strip("\n").split("\n")
-                inp_f0 = np.array(
-                    [[float(i) for i in line.split(",")] for line in lines],
-                    dtype="float32",
-                )
-            except Exception as e:
-                print(f"Произошла ошибка при чтении файла F0: {e}")
+                inp_f0 = []
+                for line in lines:
+                    inp_f0.append([float(i) for i in line.split(",")])
+                inp_f0 = np.array(inp_f0, dtype="float32")
+            except Exception as error:
+                print(f"Произошла ошибка при чтении файла F0: {error}")
         sid = torch.tensor(sid, device=self.device).unsqueeze(0).long()
         if pitch_guidance:
             pitch, pitchf = self.get_f0(
@@ -411,17 +404,15 @@ class VC:
 
         audio_opt = np.concatenate(audio_opt)
         if volume_envelope != 1:
-            audio_opt = AudioProcessor.change_rms(audio, self.sample_rate, audio_opt, tgt_sr, volume_envelope)
-        if resample_sr >= self.sample_rate and tgt_sr != resample_sr:
-            audio_opt = librosa.resample(audio_opt, orig_sr=tgt_sr, target_sr=resample_sr)
+            audio_opt = AudioProcessor.change_rms(audio, self.sample_rate, audio_opt, self.sample_rate, volume_envelope)
 
         audio_max = np.abs(audio_opt).max() / 0.99
-        max_int16 = 32768
         if audio_max > 1:
-            max_int16 /= audio_max
-        audio_opt = (audio_opt * max_int16).astype(np.int16)
+            audio_opt /= audio_max
 
-        del pitch, pitchf, sid
+        if pitch_guidance:
+            del pitch, pitchf
+        del sid
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
