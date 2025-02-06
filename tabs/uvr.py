@@ -1018,16 +1018,16 @@ def poluvr_tab():
         with gr.Group():
             with gr.Row():
                 model_file_dir = gr.Textbox(
-                    value="/tmp/PolUVR-models/",
+                    value="models/UVR_models",
                     label="Директория моделей",
                     info="Укажите путь для хранения файлов моделей.",
-                    placeholder="/tmp/PolUVR-models/",
+                    placeholder="models/UVR_models",
                 )
                 output_dir = gr.Textbox(
-                    value="output",
+                    value="output/UVR_output",
                     label="Директория для результатов",
                     info="Укажите путь для сохранения выходных файлов.",
-                    placeholder="output",
+                    placeholder="output/UVR_output",
                 )
 
         with gr.Accordion("Переименование стемов", open=False):

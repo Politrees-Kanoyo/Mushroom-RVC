@@ -14,10 +14,10 @@ from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.my_utils import load_audio
 
-RVC_MODELS_DIR = os.path.join(os.getcwd(), "models")
+RVC_MODELS_DIR = os.path.join(os.getcwd(), "models", "RVC_models")
 EMBEDDERS_DIR = os.path.join(os.getcwd(), "rvc", "models", "embedders")
 HUBERT_BASE_PATH = os.path.join(EMBEDDERS_DIR, "hubert_base.pt")
-OUTPUT_DIR = os.path.join(os.getcwd(), "output")
+OUTPUT_DIR = os.path.join(os.getcwd(), "output", "RVC_output")
 
 # Инициализация конфигурации
 config = Config()
