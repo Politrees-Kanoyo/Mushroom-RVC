@@ -18,3 +18,4 @@ PolUVR[gpu]
 torch<2.6
 torchaudio<2.6
 torchvision<0.21
+yt_dlp

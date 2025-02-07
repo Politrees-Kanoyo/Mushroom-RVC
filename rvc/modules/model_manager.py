@@ -9,7 +9,7 @@ from rvc.modules.download_source import download_file
 
 # Путь к директории, где будут храниться модели RVC
 rvc_models_dir = os.path.join(os.getcwd(), "models", "RVC_models")
-
+os.makedirs(rvc_models_dir, exist_ok=True)
 
 # Распаковывает zip-файл в указанную директорию и находит файлы модели (.pth и .index)
 def extract_zip(extraction_folder, zip_name):

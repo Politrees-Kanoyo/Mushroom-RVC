@@ -5,6 +5,7 @@ import os
 import edge_tts
 import gradio as gr
 import torch
+import yt_dlp
 from fairseq import checkpoint_utils
 from pydub import AudioSegment
 from scipy.io import wavfile
@@ -14,10 +15,18 @@ from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.my_utils import load_audio
 
+# Определяем пути к папкам и файлам (константы)
 RVC_MODELS_DIR = os.path.join(os.getcwd(), "models", "RVC_models")
 EMBEDDERS_DIR = os.path.join(os.getcwd(), "rvc", "models", "embedders")
 HUBERT_BASE_PATH = os.path.join(EMBEDDERS_DIR, "hubert_base.pt")
 OUTPUT_DIR = os.path.join(os.getcwd(), "output", "RVC_output")
+DOWNLOAD_DIR = os.path.join(os.getcwd(), "output", "YT_DLP_output")
+
+# Создаем папки, если их нет
+os.makedirs(RVC_MODELS_DIR, exist_ok=True)
+os.makedirs(EMBEDDERS_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # Инициализация конфигурации
 config = Config()
@@ -108,12 +117,27 @@ async def text_to_speech(text, voice, output_path):
     communicate = edge_tts.Communicate(text=text, voice=voice)
     await communicate.save(output_path)
 
+# Скачивает аудиофайл с указанного URL
+def download_audio_from_url(url):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'wav',
+        }],
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+    return file_path
+
 
 # Выполнение инференса с использованием RVC
 def rvc_infer(
     voice_rvc=None,
     voice_tts=None,
-    input_audio=None,
+    input_path_link=None,
     input_text=None,
     f0_method="rmvpe",
     hop_length=128,
@@ -141,10 +165,19 @@ def rvc_infer(
         input_audio = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
         asyncio.run(text_to_speech(input_text, voice_tts, input_audio))
     else:
-        if not input_audio or not os.path.exists(input_audio):
-            raise ValueError(
-                f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
-            )
+        if not input_path_link:
+            raise ValueError("Укажите путь к файлу или ссылку на аудио.")
+
+        # Проверьте, является ли input_path_link URL-адресом
+        if input_path_link.startswith(('http://', 'https://')):
+            display_progress(0.2, "[🌐] Скачивание аудио с URL...")
+            input_audio = download_audio_from_url(input_path_link)
+        else:
+            input_audio = input_path_link
+            if not os.path.exists(input_audio):
+                raise ValueError(
+                    f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
+                )
 
     base_name = os.path.splitext(os.path.basename(input_audio))[0]
     output_audio = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
