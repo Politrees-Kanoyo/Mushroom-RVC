@@ -83,8 +83,8 @@ def inference_tab():
 
             with gr.Column(visible=False) as enter_local_file:
                 song_input = gr.Text(
-                    label="Путь к локальному файлу:",
-                    info="Введите полный путь к локальному файлу.",
+                    label="Путь к файлу или ссылка:",
+                    info="Введите полный путь к файлу или ссылку.",
                     interactive=True,
                     visible=True,
                 )
@@ -96,7 +96,7 @@ def inference_tab():
                     visible=False,
                 )
                 show_enter_button = gr.Button(
-                    value="Ввести путь к локальному файлу",
+                    value="Ввести путь к файлу или ссылку",
                     interactive=True,
                     visible=True,
                 )
