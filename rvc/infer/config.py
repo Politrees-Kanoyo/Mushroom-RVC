@@ -16,15 +16,6 @@ class Config:
         # Конфигурируем параметры, специфичные для устройства
         self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
 
-    def use_insecure_load():
-        try:
-            from fairseq.data.dictionary import Dictionary
-
-            torch.serialization.add_safe_globals([Dictionary])
-            print("Warning: Использование небезопасной загрузки веса для словаря fairseq")
-        except AttributeError:
-            pass
-
     # Определяем устройство для использования
     def get_device(self):
         if torch.cuda.is_available():
@@ -51,10 +42,6 @@ class Config:
         # Корректируем параметры, если объем памяти GPU низкий
         if self.gpu_mem is not None and self.gpu_mem <= 4:
             x_pad, x_query, x_center, x_max = (1, 5, 30, 32)
-
-        # Проверьте, является ли pytorch версией 2.6 или выше
-        if tuple(map(int, torch.__version__.split("+")[0].split("."))) >= (2, 6, 0):
-            self.use_insecure_load()
 
         return x_pad, x_query, x_center, x_max
 
