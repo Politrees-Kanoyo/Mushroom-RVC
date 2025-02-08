@@ -12,6 +12,7 @@ embedders_dir = os.path.join(os.getcwd(), "rvc", "models", "embedders")
 os.makedirs(predictors_dir, exist_ok=True)
 os.makedirs(embedders_dir, exist_ok=True)
 
+
 def dl_model(link, model_name, dir_name):
     if os.path.exists(os.path.join(dir_name, model_name)):
         print(f"{model_name} уже существует. Пропускаем установку.")
