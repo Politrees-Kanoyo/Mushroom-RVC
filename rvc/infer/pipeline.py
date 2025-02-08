@@ -236,7 +236,7 @@ class VC:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         return audio1
-    
+
     """ - на будущее
     def _retrieve_speaker_embeddings(self, feats, index, big_npy, index_rate):
         npy = feats[0].cpu().numpy()

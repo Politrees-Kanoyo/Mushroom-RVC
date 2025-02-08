@@ -1,8 +1,8 @@
 from assets.logging_config import configure_logging
+
 configure_logging()
 
 import argparse
-import os
 
 from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
 

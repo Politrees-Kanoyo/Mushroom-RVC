@@ -115,15 +115,18 @@ async def text_to_speech(text, voice, output_path):
     communicate = edge_tts.Communicate(text=text, voice=voice)
     await communicate.save(output_path)
 
+
 # Скачивает аудиофайл с указанного URL
 def download_audio_from_url(url):
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-        }],
+        "format": "bestaudio/best",
+        "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "wav",
+            }
+        ],
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
@@ -167,7 +170,7 @@ def rvc_infer(
             raise ValueError("Укажите путь к файлу или ссылку на аудио.")
 
         # Проверьте, является ли input_path_link URL-адресом
-        if input_path_link.startswith(('http://', 'https://')):
+        if input_path_link.startswith(("http://", "https://")):
             display_progress(0.2, "[🌐] Скачивание аудио с URL...")
             input_audio = download_audio_from_url(input_path_link)
         else:
