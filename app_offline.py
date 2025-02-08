@@ -1,11 +1,10 @@
+from assets.logging_config import configure_logging
+configure_logging()
+
 import sys
 from typing import Any
 
 import gradio as gr
-
-from assets.logging_config import configure_logging
-
-configure_logging()
 
 from tabs.inference import inference_tab
 from tabs.install import files_upload, output_message, zip_upload

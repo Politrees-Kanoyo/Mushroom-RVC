@@ -1,3 +1,6 @@
+from assets.logging_config import configure_logging
+configure_logging()
+
 import argparse
 import os
 
