@@ -17,14 +17,12 @@ from rvc.lib.my_utils import load_audio
 
 # Определяем пути к папкам и файлам (константы)
 RVC_MODELS_DIR = os.path.join(os.getcwd(), "models", "RVC_models")
-EMBEDDERS_DIR = os.path.join(os.getcwd(), "rvc", "models", "embedders")
-HUBERT_BASE_PATH = os.path.join(EMBEDDERS_DIR, "hubert_base.pt")
 OUTPUT_DIR = os.path.join(os.getcwd(), "output", "RVC_output")
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "output", "YT_DLP_output")
+HUBERT_BASE_PATH = os.path.join(os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt")
 
 # Создаем папки, если их нет
 os.makedirs(RVC_MODELS_DIR, exist_ok=True)
-os.makedirs(EMBEDDERS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 

@@ -13,9 +13,8 @@ from torch import Tensor
 from rvc.lib.predictors.FCPE import FCPEF0Predictor
 from rvc.lib.predictors.RMVPE import RMVPE0Predictor
 
-PREDICTORS_DIR = os.path.join(os.getcwd(), "rvc", "models", "predictors")
-RMVPE_DIR = os.path.join(PREDICTORS_DIR, "rmvpe.pt")
-FCPE_DIR = os.path.join(PREDICTORS_DIR, "fcpe.pt")
+RMVPE_PATH = os.path.join(os.getcwd(), "rvc", "models", "predictors", "rmvpe.pt")
+FCPE_PATH = os.path.join(os.getcwd(), "rvc", "models", "predictors", "fcpe.pt")
 
 # Фильтр Баттерворта для высоких частот
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
@@ -77,7 +76,7 @@ class VC:
         self.t_max = self.sample_rate * self.x_max
         self.time_step = self.window / self.sample_rate * 1000
         self.device = config.device
-        self.model_rmvpe = RMVPE0Predictor(RMVPE_DIR, device=self.device)
+        self.model_rmvpe = RMVPE0Predictor(RMVPE_PATH, device=self.device)
 
     def get_f0_crepe(self, x, f0_min, f0_max, p_len, hop_length, model="full"):
         """
@@ -139,7 +138,7 @@ class VC:
             f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         elif f0_method == "fcpe":
             self.model_fcpe = FCPEF0Predictor(
-                FCPE_DIR,
+                FCPE_PATH,
                 f0_min=int(f0_min),
                 f0_max=int(f0_max),
                 dtype=torch.float32,

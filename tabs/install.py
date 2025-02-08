@@ -7,8 +7,7 @@ import gradio as gr
 
 from rvc.modules.model_manager import download_from_url, upload_separate_files, upload_zip_file
 
-embedders_dir = os.path.join(os.getcwd(), "rvc", "models", "embedders")
-hubert_base_path = os.path.join(embedders_dir, "hubert_base.pt")
+hubert_base_path = os.path.join(os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt")
 
 authorized_domains = ["huggingface.co"]
 
