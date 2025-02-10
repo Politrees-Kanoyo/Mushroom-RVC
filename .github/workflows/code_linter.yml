@@ -3,10 +3,10 @@ name: Code Linter
 on:
   push:
     branches:
-      - PolGen
+      - '*'
   pull_request:
     branches:
-      - PolGen
+      - '*'
 
 jobs:
   lint:

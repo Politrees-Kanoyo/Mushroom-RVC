@@ -2,15 +2,11 @@ name: Link Test
 
 on:
   push:
-    branches:
-      - PolGen
     paths:
       - '.github/workflows/test_links.yml'
       - 'rvc/modules/download_source.py'
       - 'rvc/modules/model_manager.py'
   pull_request:
-    branches:
-      - PolGen
     paths:
       - '.github/workflows/test_links.yml'
       - 'rvc/modules/download_source.py'

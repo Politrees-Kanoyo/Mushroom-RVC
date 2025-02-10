@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - PolGen
-  pull_request:
-    branches:
-      - PolGen
 
 jobs:
   push_format:

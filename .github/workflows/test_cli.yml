@@ -3,10 +3,10 @@ name: CLI Scripts Test
 on:
   push:
     branches:
-      - PolGen
+      - '*'
   pull_request:
     branches:
-      - PolGen
+      - '*'
 
 jobs:
   rvc_cli:
