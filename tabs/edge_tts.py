@@ -86,18 +86,6 @@ def edge_tts_tab():
                     visible=True,
                 )
             with gr.Group():
-                pitch = gr.Slider(
-                    minimum=-24,
-                    maximum=24,
-                    step=1,
-                    value=0,
-                    label="Регулировка тона",
-                    info="-24 - мужской голос || 24 - женский голос",
-                    interactive=True,
-                    visible=True,
-                )
-        with gr.Column(variant="panel", scale=2):
-            with gr.Group():
                 language = gr.Dropdown(
                     label="Язык",
                     choices=list(edge_voices.keys()),
@@ -111,19 +99,29 @@ def edge_tts_tab():
                     interactive=True,
                     visible=True,
                 )
-            with gr.Group():
-                rate = gr.Slider(
-                    minimum=-100,
-                    maximum=100,
-                    step=1,
-                    value=0,
-                    label="Скорость речи",
-                    info="Скорость воспроизведения синтеза речи",
-                    interactive=True,
-                    visible=True,
-                )
-
         with gr.Column(variant="panel", scale=3):
+            with gr.Group():
+                with gr.Row():
+                    pitch = gr.Slider(
+                        minimum=-24,
+                        maximum=24,
+                        step=1,
+                        value=0,
+                        label="Регулировка тона",
+                        info="-24 - мужской голос || 24 - женский голос",
+                        interactive=True,
+                        visible=True,
+                    )
+                    rate = gr.Slider(
+                        minimum=-100,
+                        maximum=100,
+                        step=1,
+                        value=0,
+                        label="Скорость речи",
+                        info="Скорость воспроизведения синтеза речи",
+                        interactive=True,
+                        visible=True,
+                    )
             tts_voice = gr.Audio(label="TTS голос")
 
     text_input = gr.Textbox(label="Введите текст", lines=5)
@@ -188,7 +186,7 @@ def edge_tts_tab():
                             minimum=0,
                             maximum=1,
                             step=0.01,
-                            value=0.25,
+                            value=1,
                             label="Скорость смешивания RMS",
                             info="Заменить или смешать с огибающей громкости выходного сигнала. Чем ближе значение к 1, тем больше используется огибающая выходного сигнала.",
                             interactive=True,
@@ -198,7 +196,7 @@ def edge_tts_tab():
                             minimum=0,
                             maximum=0.5,
                             step=0.01,
-                            value=0.33,
+                            value=0.5,
                             label="Защита согласных",
                             info="Защитить согласные и звуки дыхания, чтобы избежать электроакустических разрывов и артефактов. Максимальное значение параметра 0.5 обеспечивает полную защиту. Уменьшение этого значения может снизить защиту, но уменьшить эффект индексирования.",
                             interactive=True,
