@@ -1,4 +1,4 @@
-'''Настройка конфигурации логирования для различных библиотек и модулей.'''
+"""Настройка конфигурации логирования для различных библиотек и модулей."""
 
 import logging
 import os
@@ -40,7 +40,7 @@ def configure_logging(enable_configure_logging=True, global_logger=False, loggin
     В этом случае мы устанавливаем уровень логирования WARNING для всех библиотек и модулей,
     чтобы игнорировать сообщения уровня DEBUG и INFO.
     """
-    
+
     if enable_configure_logging:
         # ===== Настройка переменных окружения для зависимостей ===== #
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
