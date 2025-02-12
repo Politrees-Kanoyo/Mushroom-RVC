@@ -112,6 +112,7 @@ async def text_to_speech(text, voice, rate, output_path):
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
     await communicate.save(output_path)
 
+
 # Выполнение инференса с использованием RVC
 def rvc_infer(
     voice_rvc=None,

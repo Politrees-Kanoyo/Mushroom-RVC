@@ -3,7 +3,9 @@ from assets.logging_config import configure_logging
 configure_logging(True, False, "WARNING")
 
 import argparse
+
 from rvc.infer.infer import rvc_infer
+
 
 def create_parser():
     # Базовый парсер с общими аргументами
@@ -35,6 +37,7 @@ def create_parser():
 
     return parser
 
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -53,21 +56,12 @@ def main():
     }
 
     if args.command == "rvc":
-        output = rvc_infer(
-            **common_params,
-            input_audio=args.input_path,
-            use_tts=False
-        )
+        output = rvc_infer(**common_params, input_audio=args.input_path, use_tts=False)
     elif args.command == "tts":
-        output = rvc_infer(
-            **common_params,
-            input_text=args.text,
-            voice_tts=args.voice,
-            tts_rate=args.rate,
-            use_tts=True
-        )
+        output = rvc_infer(**common_params, input_text=args.text, voice_tts=args.voice, tts_rate=args.rate, use_tts=True)
 
     print(f"\033[1;92m\nГолос успешно заменен!\n\033[0m — {', '.join(output)}")
+
 
 if __name__ == "__main__":
     main()
