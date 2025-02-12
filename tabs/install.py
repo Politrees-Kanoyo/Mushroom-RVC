@@ -7,13 +7,11 @@ import gradio as gr
 
 from rvc.modules.model_manager import download_from_url, upload_separate_files, upload_zip_file
 
-hubert_base_path = os.path.join(os.getcwd(), "rvc", "models", "embedders", "hubert_base.pt")
+EMBEDDERS_DIR = os.path.join(os.getcwd(), "rvc", "models", "embedders")
+HUBERT_BASE_PATH = os.path.join(EMBEDDERS_DIR, "hubert_base.pt")
+BASE_URL = "https://huggingface.co/Politrees/RVC_resources/resolve/main/embedders/pytorch/"
 
-authorized_domains = ["huggingface.co"]
-
-base_url = "https://huggingface.co/Politrees/RVC_resources/resolve/main/embedders/"
-
-models = [
+MODELS = [
     "hubert_base.pt",
     "contentvec_base.pt",
     "korean_hubert_base.pt",
@@ -45,23 +43,23 @@ def download_and_replace_model(model_name, custom_url, progress=gr.Progress()):
             if not custom_url.endswith((".pt", "?download=true")):
                 return "Ошибка: указанный URL не соответствует требованиям. Он должен вести к файлу с расширением .pt или заканчиваться на '?download=true'"
             parsed_url = urllib.parse.urlparse(custom_url)
-            if parsed_url.netloc not in authorized_domains:
+            if parsed_url.netloc not in ["huggingface.co"]:
                 return "Ошибка: указанный URL не принадлежит к разрешенным доменам."
             model_url = custom_url
             model_name = os.path.basename(parsed_url.path)
         else:
-            model_url = base_url + model_name
+            model_url = BASE_URL + model_name
 
-        tmp_model_path = os.path.join(embedders_dir, "tmp_model.pt")
+        tmp_model_path = os.path.join(EMBEDDERS_DIR, "tmp_model.pt")
 
         progress(0.4, desc=f'[~] Установка модели "{model_name}"...')
         download_file(model_url, tmp_model_path)
 
         progress(0.8, desc="[~] Удаление старой HuBERT модели...")
-        if os.path.exists(hubert_base_path):
-            os.remove(hubert_base_path)
+        if os.path.exists(HUBERT_BASE_PATH):
+            os.remove(HUBERT_BASE_PATH)
 
-        os.rename(tmp_model_path, hubert_base_path)
+        os.rename(tmp_model_path, HUBERT_BASE_PATH)
         return f'Модель "{model_name}" успешно установлена.'
     except Exception as e:
         return f'Ошибка при установке модели "{model_name}": {str(e)}'
@@ -141,7 +139,7 @@ def install_hubert_tab():
         with gr.Column(variant="panel"):
             custom_url_checkbox = gr.Checkbox(label="Использовать другой HuBERT", value=False)
             custom_url_textbox = gr.Textbox(label="URL модели", visible=False)
-            hubert_model_dropdown = gr.Dropdown(models, label="Список доступных HuBERT моделей:", visible=True)
+            hubert_model_dropdown = gr.Dropdown(MODELS, label="Список доступных HuBERT моделей:", visible=True)
         hubert_download_btn = gr.Button("Установить!", variant="primary")
     hubert_output_message = gr.Text(label="Сообщение вывода", interactive=False)
 

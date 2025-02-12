@@ -20,7 +20,7 @@ def download_file(url, zip_name, progress):
             download_from_pixeldrain(url, zip_name, progress)
         elif hostname == "mega.nz":
             download_from_mega(url, zip_name, progress)
-        elif hostname == "disk.yandex.ru" or hostname == "yadi.sk":
+        elif hostname in {"disk.yandex.ru", "yadi.sk"}:
             download_from_yandex(url, zip_name, progress)
         else:
             raise ValueError(f"Неподдерживаемый источник: {url}")  # Обработка неподдерживаемых ссылок
