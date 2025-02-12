@@ -1,6 +1,6 @@
 from assets.logging_config import configure_logging
 
-configure_logging()
+configure_logging(True, False, "WARNING")
 
 import sys
 from typing import Any

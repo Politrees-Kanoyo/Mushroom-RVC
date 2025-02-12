@@ -1,6 +1,6 @@
 from assets.logging_config import configure_logging
 
-configure_logging()
+configure_logging(True, False, "WARNING")
 
 import argparse
 from rvc.infer.infer import rvc_infer
