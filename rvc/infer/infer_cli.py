@@ -12,7 +12,7 @@ def create_parser():
     base_parser.add_argument("-p", "--pitch", type=float, required=True, help="Корректировка высоты тона")
     base_parser.add_argument("-ir", "--index_rate", type=float, default=0, help="Коэффициент индекса (0-1)")
     base_parser.add_argument("-rms", "--volume_envelope", type=float, default=0.25, help="Огибающая громкости")
-    base_parser.add_argument("-f0", "--method", type=str, default="rmvpe", help="Метод извлечения F0")
+    base_parser.add_argument("-f0", "--f0_method", type=str, default="rmvpe", help="Метод извлечения F0")
     base_parser.add_argument("-hop", "--hop_length", type=int, default=128, help="Длина хопа для обработки")
     base_parser.add_argument("-pro", "--protect", type=float, default=0.33, help="Защита согласных")
     base_parser.add_argument("-f0min", "--f0_min", type=int, default=50, help="Минимальная частота F0")
@@ -43,7 +43,7 @@ def main():
         "pitch": args.pitch,
         "index_rate": args.index_rate,
         "volume_envelope": args.volume_envelope,
-        "method": args.method,
+        "f0_method": args.f0_method,
         "hop_length": args.hop_length,
         "protect": args.protect,
         "f0_min": args.f0_min,
