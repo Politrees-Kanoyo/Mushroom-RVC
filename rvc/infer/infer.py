@@ -198,5 +198,4 @@ def rvc_infer(
 
     if use_tts:
         return output_audio, input_audio
-    else:
-        return output_audio
+    return output_audio

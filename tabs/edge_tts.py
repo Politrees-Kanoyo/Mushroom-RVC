@@ -1,4 +1,5 @@
 import os
+import re
 
 import gradio as gr
 
@@ -52,10 +53,10 @@ def update_edge_voices(selected_language):
 
 
 def get_folders(models_dir):
-    folders = [item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))]
-    # Сортируем список папок
-    folders.sort(key=lambda x: (x.isdigit(), x.lower()))
-    return folders
+    return sorted(
+        (item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))),
+        key=lambda x: [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', x)]
+    )
 
 
 def update_models_list():
@@ -65,8 +66,7 @@ def update_models_list():
 def show_hop_slider(pitch_detection_algo):
     if pitch_detection_algo in ["crepe", "crepe-tiny"]:
         return gr.update(visible=True)
-    else:
-        return gr.update(visible=False)
+    return gr.update(visible=False)
 
 
 def edge_tts_tab():

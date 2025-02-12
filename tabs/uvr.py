@@ -164,7 +164,7 @@ def prepare_output_dir(input_file, output_dir):
             shutil.rmtree(out_dir)
         os.makedirs(out_dir)
     except Exception as e:
-        raise RuntimeError(f"Ошибка при создании выходной директории {out_dir}: {e}")
+        raise RuntimeError(f"Ошибка при создании выходной директории {out_dir}: {e}") from e
     return out_dir
 
 
@@ -203,6 +203,7 @@ def leaderboard(list_filter, list_limit):
             ],
             capture_output=True,
             text=True,
+            check=True,
         )
         if result.returncode != 0:
             return f"Ошибка: {result.stderr}"
@@ -562,8 +563,7 @@ def demucs_separator(
 
         if model_key == "htdemucs_6s":
             return stems[0], stems[1], stems[2], stems[3], stems[4], stems[5]
-        else:
-            return stems[0], stems[1], stems[2], stems[3], None, None
+        return stems[0], stems[1], stems[2], stems[3], None, None
     except Exception as e:
         raise RuntimeError(f"Ошибка при разделении аудио с помощью Demucs: {e}") from e
 
@@ -572,8 +572,7 @@ def update_stems(model):
     """Обновляет видимость выходных стемов в зависимости от выбранной модели Demucs."""
     if model == "htdemucs_6s":
         return gr.update(visible=True)
-    else:
-        return gr.update(visible=False)
+    return gr.update(visible=False)
 
 
 def show_hide_params(param):

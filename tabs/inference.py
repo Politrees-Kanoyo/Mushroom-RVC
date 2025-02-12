@@ -1,4 +1,5 @@
 import os
+import re
 
 import gradio as gr
 
@@ -8,10 +9,10 @@ OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
 
 def get_folders(models_dir):
-    folders = [item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))]
-    # Сортируем список папок
-    folders.sort(key=lambda x: (x.isdigit(), x.lower()))
-    return folders
+    return sorted(
+        (item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))),
+        key=lambda x: [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', x)]
+    )
 
 
 def update_models_list():
@@ -25,8 +26,7 @@ def process_file_upload(file):
 def show_hop_slider(pitch_detection_algo):
     if pitch_detection_algo in ["crepe", "crepe-tiny"]:
         return gr.update(visible=True)
-    else:
-        return gr.update(visible=False)
+    return gr.update(visible=False)
 
 
 def swap_visibility():

@@ -20,10 +20,9 @@ class Config:
     def get_device(self):
         if torch.cuda.is_available():
             return "cuda"
-        elif torch.backends.mps.is_available():
+        if torch.backends.mps.is_available():
             return "mps"
-        else:
-            return "cpu"
+        return "cpu"
 
     # Конфигурируем параметры, специфичные для устройства
     def device_config(self):

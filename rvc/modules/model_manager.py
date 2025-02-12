@@ -100,15 +100,18 @@ def upload_separate_files(pth_file, index_file, dir_name, progress=gr.Progress()
 
         os.makedirs(extraction_folder, exist_ok=True)
 
-        # Копируем файл .pth
+        # Загружаем файл .pth
+        progress(0.4, desc="[~] Загрузка .pth файла...")
         if pth_file:
             pth_path = os.path.join(extraction_folder, os.path.basename(pth_file.name))
             shutil.copyfile(pth_file.name, pth_path)
 
-        # Копируем файл .index
+        # Загружаем файл .index
+        progress(0.8, desc="[~] Загрузка .index файла...")
         if index_file:
             index_path = os.path.join(extraction_folder, os.path.basename(index_file.name))
             shutil.copyfile(index_file.name, index_path)
+
         return f"[+] Модель {dir_name} успешно загружена!"
     except Exception as e:
         # Обработка ошибок при загрузке файлов

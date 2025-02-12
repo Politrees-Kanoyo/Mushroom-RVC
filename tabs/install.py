@@ -24,8 +24,7 @@ MODELS = [
 def toggle_custom_url(checkbox_value):
     if checkbox_value:
         return gr.update(visible=True, value=""), gr.update(visible=False, value=None)
-    else:
-        return gr.update(visible=False, value=""), gr.update(visible=True, value="hubert_base.pt")
+    return gr.update(visible=False, value=""), gr.update(visible=True, value="hubert_base.pt")
 
 
 def output_message():
