@@ -11,8 +11,7 @@ if not exist env\python.exe (
 )
 
 set PYTHON=env\python.exe
-set ONLINE_SCRIPT=app.py
-set OFFLINE_SCRIPT=app_offline.py
+set SCRIPT=app.py
 
 call :check_internet_connection
 call :running_interface
@@ -20,13 +19,8 @@ exit /b 0
 
 :check_internet_connection
 echo Checking internet connection...
-powershell -Command "Test-Connection -ComputerName 8.8.8.8 -Count 1 -Quiet" >nul 2>&1 && (
-    echo Connection to 8.8.8.8 successful
-    set "INTERNET_AVAILABLE=1"
-    goto :check_end
-)
-powershell -Command "Test-Connection -ComputerName microsoft.com -Count 1 -Quiet" >nul 2>&1 && (
-    echo Connection to microsoft.com successful
+ping -n 1 google.com >nul 2>&1 && (
+    echo Internet connection is available
     set "INTERNET_AVAILABLE=1"
     goto :check_end
 )
@@ -40,23 +34,18 @@ exit /b 0
 cls
 echo ==== Starting Application ====
 
-if not exist %ONLINE_SCRIPT% (
-    echo Critical Error: Main script %ONLINE_SCRIPT% not found!
+if not exist %SCRIPT% (
+    echo Critical Error: Main script %SCRIPT% not found!
     pause
     exit /b 1
 )
 
 if "%INTERNET_AVAILABLE%"=="0" (
-    if not exist %OFFLINE_SCRIPT% (
-        echo Critical Error: Offline script %OFFLINE_SCRIPT% not found!
-        pause
-        exit /b 1
-    )
     echo Starting in OFFLINE mode...
-    %PYTHON% %OFFLINE_SCRIPT% --open
+    %PYTHON% %SCRIPT% --offline --open
 ) else (
     echo Starting in ONLINE mode...
-    %PYTHON% %ONLINE_SCRIPT% --open
+    %PYTHON% %SCRIPT% --open
 )
 
 if errorlevel 1 (

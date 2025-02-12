@@ -19,8 +19,13 @@ MAX_PORT_ATTEMPTS = 10
 
 output_message_component = output_message()
 
+
+def is_offline_mode() -> bool:
+    return "--offline" in sys.argv
+
+
 with gr.Blocks(
-    title="PolGen - Politrees",
+    title="PolGen - Politrees" if not is_offline_mode() else "PolGen (offline) - Politrees",
     css="footer{display:none !important}",
     theme=gr.themes.Soft(
         primary_hue="green",
@@ -37,20 +42,31 @@ with gr.Blocks(
     with gr.Tab("Преобразование голоса (RVC)"):
         inference_tab()
 
-    with gr.Tab("Преобразование текста в речь (TTS)"):
-        edge_tts_tab()
+    if not is_offline_mode():
+        with gr.Tab("Преобразование текста в речь (TTS)"):
+            edge_tts_tab()
 
     with gr.Tab("PolUVR (UVR)"):
+        if is_offline_mode():
+            gr.HTML(
+                "<center><h3>PolUVR не будет функционировать без подключения к интернету, если вы ранее не установили необходимые модели.</h3></center>"
+            )
         poluvr_tab()
 
     with gr.Tab("Загрузка моделей"):
-        with gr.Tab("Загрузка RVC моделей"):
-            url_zip_download(output_message_component)
-            zip_upload(output_message_component)
-            files_upload(output_message_component)
-            output_message_component.render()
-        with gr.Tab("Загрузка HuBERT моделей"):
-            install_hubert_tab()
+        if not is_offline_mode():
+            with gr.Tab("Загрузка RVC моделей"):
+                url_zip_download(output_message_component)
+                zip_upload(output_message_component)
+                files_upload(output_message_component)
+                output_message_component.render()
+            with gr.Tab("Загрузка HuBERT моделей"):
+                install_hubert_tab()
+        else:
+            with gr.Tab("Загрузка RVC моделей"):
+                zip_upload(output_message_component)
+                files_upload(output_message_component)
+                output_message_component.render()
 
 
 def launch_gradio(server_name: str, server_port: int) -> None:
