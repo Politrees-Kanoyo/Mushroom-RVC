@@ -113,12 +113,10 @@ class VC:
 
     def get_f0(
         self,
-        input_audio_path,
         x,
         p_len,
         pitch,
         f0_method,
-        filter_radius,
         hop_length,
         inp_f0=None,
         f0_min=50,
@@ -127,6 +125,7 @@ class VC:
         """
         Получает F0 с использованием выбранного метода.
         """
+        f0 = None
         f0_mel_min = 1127 * np.log(1 + f0_min / 700)
         f0_mel_max = 1127 * np.log(1 + f0_max / 700)
 
@@ -149,6 +148,9 @@ class VC:
             f0 = self.model_fcpe.compute_f0(x, p_len=p_len)
             del self.model_fcpe
             gc.collect()
+
+        if f0 is None:
+            raise ValueError("Метод F0 не распознан или не смог рассчитать F0.")
 
         f0 *= pow(2, pitch / 12)
         tf0 = self.sample_rate // self.window
@@ -254,13 +256,11 @@ class VC:
         net_g,
         sid,
         audio,
-        input_audio_path,
         pitch,
         f0_method,
         file_index,
         index_rate,
         pitch_guidance,
-        filter_radius,
         volume_envelope,
         version,
         protect,
@@ -316,12 +316,10 @@ class VC:
         sid = torch.tensor(sid, device=self.device).unsqueeze(0).long()
         if pitch_guidance:
             pitch, pitchf = self.get_f0(
-                input_audio_path,
                 audio_pad,
                 p_len,
                 pitch,
                 f0_method,
-                filter_radius,
                 hop_length,
                 inp_f0,
                 f0_min,

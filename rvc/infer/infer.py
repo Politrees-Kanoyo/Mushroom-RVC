@@ -56,9 +56,8 @@ def load_rvc_model(rvc_model):
 
 # Загружает модель Hubert
 def load_hubert(model_path):
-    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task([model_path], suffix="")
-    hubert = models[0].to(config.device)
-    hubert = hubert.float()
+    model, _, _ = checkpoint_utils.load_model_ensemble_and_task([model_path], suffix="")
+    hubert = model[0].to(config.device).float()
     hubert.eval()
     return hubert
 
@@ -124,7 +123,6 @@ def rvc_infer(
     index_rate=0.5,
     volume_envelope=0.25,
     protect=0.33,
-    filter_radius=3,
     f0_min=50,
     f0_max=1100,
     output_format="wav",
@@ -168,13 +166,11 @@ def rvc_infer(
         net_g,
         0,
         audio,
-        input_audio,
         pitch,
         f0_method,
         index_path,
         index_rate,
         pitch_guidance,
-        filter_radius,
         volume_envelope,
         version,
         protect,

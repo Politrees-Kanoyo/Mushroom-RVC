@@ -4,14 +4,13 @@ configure_logging()
 
 import argparse
 
-from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
+from rvc.infer.infer import rvc_infer
 
 parser = argparse.ArgumentParser(description="Замена голоса в директории output/", add_help=True)
 parser.add_argument("-i", "--input_path", type=str, required=True)
 parser.add_argument("-m", "--model_name", type=str, required=True)
 parser.add_argument("-p", "--pitch", type=float, required=True)
 parser.add_argument("-ir", "--index_rate", type=float, default=0)
-parser.add_argument("-fr", "--filter_radius", type=int, default=3)
 parser.add_argument("-rms", "--volume_envelope", type=float, default=0.25)
 parser.add_argument("-f0", "--method", type=str, default="rmvpe")
 parser.add_argument("-hop", "--hop_length", type=int, default=128)
@@ -32,7 +31,6 @@ output_path = rvc_infer(
     index_rate=args.index_rate,
     volume_envelope=args.volume_envelope,
     protect=args.protect,
-    filter_radius=args.filter_radius,
     f0_min=args.f0_min,
     f0_max=args.f0_max,
     output_format=args.format,

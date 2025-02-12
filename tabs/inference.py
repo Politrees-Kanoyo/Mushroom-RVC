@@ -157,16 +157,6 @@ def inference_tab():
                             interactive=True,
                             visible=True,
                         )
-                        filter_radius = gr.Slider(
-                            minimum=0,
-                            maximum=7,
-                            step=1,
-                            value=3,
-                            label="Радиус фильтра",
-                            info="Если это число больше или равно трем, использование медианной фильтрации по собранным результатам тона может привести к снижению дыхания..",
-                            interactive=True,
-                            visible=True,
-                        )
                         volume_envelope = gr.Slider(
                             minimum=0,
                             maximum=1,
@@ -241,7 +231,6 @@ def inference_tab():
             index_rate,
             volume_envelope,
             protect,
-            filter_radius,
             f0_min,
             f0_max,
             output_format,
