@@ -31,7 +31,7 @@ def create_parser():
     tts_parser = subparsers.add_parser("tts", parents=[base_parser], help="Синтез речи из текста")
     tts_parser.add_argument("-t", "--text", type=str, required=True, help="Текст для синтеза речи")
     tts_parser.add_argument("-v", "--voice", type=str, required=True, help="Голос для синтеза речи")
-    tts_parser.add_argument("-r", "--rate", type=str, default=0, help="Скорость синтеза речи")
+    tts_parser.add_argument("-r", "--rate", type=int, default=0, help="Скорость синтеза речи")
 
     return parser
 
