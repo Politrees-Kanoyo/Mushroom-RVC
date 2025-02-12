@@ -9,7 +9,7 @@ def create_parser():
     # Базовый парсер с общими аргументами
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument("-m", "--model_name", type=str, required=True, help="Название RVC модели")
-    base_parser.add_argument("-p", "--pitch", type=float, required=True, help="Корректировка высоты тона")
+    base_parser.add_argument("-p", "--pitch", type=float, default=0, help="Высота тона RVC модели")
     base_parser.add_argument("-ir", "--index_rate", type=float, default=0, help="Коэффициент индекса (0-1)")
     base_parser.add_argument("-rms", "--volume_envelope", type=float, default=0.25, help="Огибающая громкости")
     base_parser.add_argument("-f0", "--f0_method", type=str, default="rmvpe", help="Метод извлечения F0")
@@ -31,6 +31,7 @@ def create_parser():
     tts_parser = subparsers.add_parser("tts", parents=[base_parser], help="Синтез речи из текста")
     tts_parser.add_argument("-t", "--text", type=str, required=True, help="Текст для синтеза речи")
     tts_parser.add_argument("-v", "--voice", type=str, required=True, help="Голос для синтеза речи")
+    tts_parser.add_argument("-r", "--rate", type=str, default=0, help="Скорость синтеза речи")
 
     return parser
 
@@ -62,6 +63,7 @@ def main():
             **common_params,
             input_text=args.text,
             voice_tts=args.voice,
+            tts_rate=args.rate,
             use_tts=True
         )
 

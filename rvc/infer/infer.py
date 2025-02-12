@@ -107,8 +107,9 @@ def convert_audio(input_audio, output_audio, output_format):
 
 
 # Синтезирует текст в речь с использованием edge_tts.
-async def text_to_speech(text, voice, output_path):
-    communicate = edge_tts.Communicate(text=text, voice=voice)
+async def text_to_speech(text, voice, rate, output_path):
+    rate = f"+{rate}%" if rate >= 0 else f"{rate}%"
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
     await communicate.save(output_path)
 
 # Выполнение инференса с использованием RVC
@@ -120,6 +121,7 @@ def rvc_infer(
     f0_method="rmvpe",
     hop_length=128,
     pitch=0,
+    tts_rate=0,
     index_rate=0.5,
     volume_envelope=0.25,
     protect=0.33,
@@ -140,7 +142,7 @@ def rvc_infer(
 
         display_progress(0.2, "[🎙️] Синтез речи...")
         input_audio = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
-        asyncio.run(text_to_speech(input_text, voice_tts, input_audio))
+        asyncio.run(text_to_speech(input_text, voice_tts, tts_rate, input_audio))
     else:
         if not os.path.exists(input_audio):
             raise ValueError(

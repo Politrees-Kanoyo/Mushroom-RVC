@@ -222,12 +222,13 @@ def inference_tab():
         rvc_infer,
         inputs=[
             rvc_model,
-            gr.Textbox(visible=False),  # voice_tts
+            gr.Dropdown(visible=False),  # voice_tts
             song_input,
             gr.Textbox(visible=False),  # input_text
             f0_method,
             hop_length,
             pitch,
+            gr.Slider(value=0, visible=False),  # tts_rate
             index_rate,
             volume_envelope,
             protect,

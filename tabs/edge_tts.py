@@ -111,6 +111,17 @@ def edge_tts_tab():
                     interactive=True,
                     visible=True,
                 )
+            with gr.Group():
+                rate = gr.Slider(
+                    minimum=-100,
+                    maximum=100,
+                    step=1,
+                    value=0,
+                    label="Скорость речи",
+                    info="Скорость воспроизведения синтеза речи",
+                    interactive=True,
+                    visible=True,
+                )
 
         with gr.Column(variant="panel", scale=3):
             tts_voice = gr.Audio(label="TTS голос")
@@ -231,6 +242,7 @@ def edge_tts_tab():
             f0_method,
             hop_length,
             pitch,
+            rate,
             index_rate,
             volume_envelope,
             protect,
