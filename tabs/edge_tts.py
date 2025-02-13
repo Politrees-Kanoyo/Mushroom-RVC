@@ -99,32 +99,32 @@ def edge_tts_tab():
                     interactive=True,
                     visible=True,
                 )
-        with gr.Column(variant="panel", scale=3):
-            with gr.Group():
-                with gr.Row():
-                    rvc_pitch = gr.Slider(
-                        minimum=-24,
-                        maximum=24,
-                        step=1,
-                        value=0,
-                        label="Регулировка высоты тона RVC",
-                        interactive=True,
-                        visible=True,
-                    )
-                    tts_pitch = gr.Slider(
-                        minimum=-100,
-                        maximum=100,
-                        step=1,
-                        value=0,
-                        label="Регулировка высоты тона TTS",
-                        interactive=True,
-                        visible=True,
-                    )
+        with gr.Column(variant="panel", scale=2):
+            rvc_pitch = gr.Slider(
+                minimum=-24,
+                maximum=24,
+                step=1,
+                value=0,
+                label="Регулировка высоты тона",
+                info="-24 - мужской голос || 24 - женский голос",
+                interactive=True,
+                visible=True,
+            )
             synth_voice = gr.Audio(label="Синтзированный TTS голос")
 
-    with gr.Accordion("Дополнительные настройки синтеза речи", open=False):
+    with gr.Accordion("Настройки синтеза речи", open=False):
         with gr.Group():
             with gr.Row():
+                tts_pitch = gr.Slider(
+                    minimum=-100,
+                    maximum=100,
+                    step=1,
+                    value=0,
+                    label="Регулировка высоты тона TTS",
+                    info="-100 - мужской голос || 100 - женский голос",
+                    interactive=True,
+                    visible=True,
+                )
                 tts_volume = gr.Slider(
                     minimum=-100,
                     maximum=100,
