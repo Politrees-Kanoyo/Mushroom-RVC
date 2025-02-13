@@ -222,7 +222,7 @@ def inference_tab():
         rvc_infer,
         inputs=[
             rvc_model,
-            song_input
+            song_input,
             f0_method,
             f0_min,
             f0_max,
