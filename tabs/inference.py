@@ -59,7 +59,7 @@ def inference_tab():
                     visible=True,
                 )
             with gr.Group():
-                pitch = gr.Slider(
+                rvc_pitch = gr.Slider(
                     minimum=-24,
                     maximum=24,
                     step=1,
@@ -222,20 +222,22 @@ def inference_tab():
         rvc_infer,
         inputs=[
             rvc_model,
-            gr.Dropdown(visible=False),  # voice_tts
-            song_input,
-            gr.Textbox(visible=False),  # input_text
+            song_input
             f0_method,
-            hop_length,
-            pitch,
-            gr.Slider(value=0, visible=False),  # tts_rate
-            index_rate,
-            volume_envelope,
-            protect,
             f0_min,
             f0_max,
+            hop_length,
+            rvc_pitch,
+            protect,
+            index_rate,
+            volume_envelope,
             output_format,
             gr.Checkbox(value=False, visible=False),  # use_tts
+            gr.Dropdown(visible=False),  # tts_voice
+            gr.Textbox(visible=False),  # tts_text
+            gr.Slider(value=0, visible=False),  # tts_rate
+            gr.Slider(value=0, visible=False),  # tts_volume
+            gr.Slider(value=0, visible=False),  # tts_pitch
         ],
         outputs=[converted_voice],
     )

@@ -92,7 +92,7 @@ def edge_tts_tab():
                     interactive=True,
                     visible=True,
                 )
-                voice = gr.Dropdown(
+                tts_voice = gr.Dropdown(
                     value="en-GB-SoniaNeural",
                     label="Голос",
                     choices=["en-GB-SoniaNeural", "en-GB-RyanNeural"],
@@ -102,29 +102,51 @@ def edge_tts_tab():
         with gr.Column(variant="panel", scale=3):
             with gr.Group():
                 with gr.Row():
-                    pitch = gr.Slider(
+                    rvc_pitch = gr.Slider(
                         minimum=-24,
                         maximum=24,
                         step=1,
                         value=0,
-                        label="Регулировка тона",
-                        info="-24 - мужской голос || 24 - женский голос",
+                        label="Регулировка высоты тона RVC",
                         interactive=True,
                         visible=True,
                     )
-                    rate = gr.Slider(
+                    tts_pitch = gr.Slider(
                         minimum=-100,
                         maximum=100,
                         step=1,
                         value=0,
-                        label="Скорость речи",
-                        info="Скорость воспроизведения синтеза речи",
+                        label="Регулировка высоты тона TTS",
                         interactive=True,
                         visible=True,
                     )
-            tts_voice = gr.Audio(label="TTS голос")
+            synth_voice = gr.Audio(label="Синтзированный TTS голос")
 
-    text_input = gr.Textbox(label="Введите текст", lines=5)
+    with gr.Accordion("Дополнительные настройки синтеза речи", open=False):
+        with gr.Group():
+            with gr.Row():
+                tts_volume = gr.Slider(
+                    minimum=-100,
+                    maximum=100,
+                    step=1,
+                    value=0,
+                    label="Громкость речи",
+                    info="Громкость воспроизведения синтеза речи",
+                    interactive=True,
+                    visible=True,
+                )
+                tts_rate = gr.Slider(
+                    minimum=-100,
+                    maximum=100,
+                    step=1,
+                    value=0,
+                    label="Скорость речи",
+                    info="Скорость воспроизведения синтеза речи",
+                    interactive=True,
+                    visible=True,
+                )
+
+    tts_text = gr.Textbox(label="Введите текст", lines=5)
 
     with gr.Group():
         with gr.Row(equal_height=True):
@@ -227,27 +249,29 @@ def edge_tts_tab():
                             visible=True,
                         )
 
-    language.change(update_edge_voices, inputs=language, outputs=voice)
+    language.change(update_edge_voices, inputs=language, outputs=tts_voice)
 
     ref_btn.click(update_models_list, None, outputs=rvc_model)
     generate_btn.click(
         rvc_infer,
         inputs=[
             rvc_model,
-            voice,
             gr.Textbox(visible=False),  # input_audio
-            text_input,
             f0_method,
-            hop_length,
-            pitch,
-            rate,
-            index_rate,
-            volume_envelope,
-            protect,
             f0_min,
             f0_max,
+            hop_length,
+            rvc_pitch,
+            protect,
+            index_rate,
+            volume_envelope,
             output_format,
             gr.Checkbox(value=True, visible=False),  # use_tts
+            tts_voice,
+            tts_text,
+            tts_rate,
+            tts_volume,
+            tts_pitch,
         ],
-        outputs=[converted_tts_voice, tts_voice],
+        outputs=[converted_tts_voice, synth_voice],
     )

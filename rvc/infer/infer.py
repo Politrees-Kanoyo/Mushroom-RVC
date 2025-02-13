@@ -107,60 +107,74 @@ def convert_audio(input_audio, output_audio, output_format):
 
 
 # Синтезирует текст в речь с использованием edge_tts.
-async def text_to_speech(text, voice, rate, output_path):
+async def text_to_speech(voice, text, rate, volume, pitch, output_path):
+    if not (-100 <= rate <= 100):
+        raise ValueError(f"Rate должен быть в диапазоне от -100% до +100%")
+    if not (-100 <= volume <= 100):
+        raise ValueError(f"Volume должен быть в диапазоне от -100% до +100%")
+    if not (-100 <= pitch <= 100):
+        raise ValueError(f"Pitch должен быть в диапазоне от -100Hz до +100Hz")
+
     rate = f"+{rate}%" if rate >= 0 else f"{rate}%"
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
+    volume = f"+{volume}%" if volume >= 0 else f"{volume}%"
+    pitch = f"+{pitch}Hz" if pitch >= 0 else f"{pitch}Hz"
+
+    communicate = edge_tts.Communicate(voice=voice, text=text, rate=rate, volume=volume, pitch=pitch)
     await communicate.save(output_path)
 
 
 # Выполнение инференса с использованием RVC
 def rvc_infer(
-    voice_rvc=None,
-    voice_tts=None,
-    input_audio=None,
-    input_text=None,
+    # RVC
+    rvc_model=None,
+    input_path=None,
     f0_method="rmvpe",
-    hop_length=128,
-    pitch=0,
-    tts_rate=0,
-    index_rate=0,
-    volume_envelope=1,
-    protect=0.5,
     f0_min=50,
     f0_max=1100,
+    hop_length=128,
+    rvc_pitch=0,
+    protect=0.5,
+    index_rate=0,
+    volume_envelope=1,
     output_format="wav",
+    # EdgeTTS
     use_tts=False,
+    tts_voice=None,
+    tts_text=None,
+    tts_rate=0,
+    tts_volume=0,
+    tts_pitch=0,
 ):
-    if not voice_rvc:
+    if not rvc_model:
         raise ValueError("Выберите модель голоса для преобразования.")
 
     display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
     if use_tts:
-        if not input_text:
+        if not tts_text:
             raise ValueError("Введите необходимый текст в поле для ввода.")
-        if not voice_tts:
+        if not tts_voice:
             raise ValueError("Выберите язык и голос для синтеза речи.")
 
         display_progress(0.2, "[🎙️] Синтез речи...")
-        input_audio = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
-        asyncio.run(text_to_speech(input_text, voice_tts, tts_rate, input_audio))
+        input_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
+        asyncio.run(text_to_speech(tts_voice, tts_text, tts_rate, tts_volume, tts_pitch, input_path))
     else:
-        if not os.path.exists(input_audio):
+        if not os.path.exists(input_path):
             raise ValueError(
-                f"Не удалось найти аудиофайл {input_audio}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
+                f"Не удалось найти аудиофайл {input_path}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
             )
 
-    base_name = os.path.splitext(os.path.basename(input_audio))[0]
-    output_audio = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
+    base_name = os.path.splitext(os.path.basename(input_path))[0]
+    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
 
     # Загружаем модель Hubert
     hubert_model = load_hubert(HUBERT_BASE_PATH)
     # Загружаем модель RVC и индекс
-    model_path, index_path = load_rvc_model(voice_rvc)
+    model_path, index_path = load_rvc_model(rvc_model)
     # Получаем конвертер голоса
     cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
     # Загружаем аудиофайл
-    audio = load_audio(input_audio, 16000)
+    audio = load_audio(input_path, 16000)
     pitch_guidance = cpt.get("f0", 1)
 
     display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...")
@@ -183,13 +197,13 @@ def rvc_infer(
         f0_max=f0_max,
     )
     # Сохраняем результат в wav файл
-    wavfile.write(output_audio, tgt_sr, audio_opt)
+    wavfile.write(output_path, tgt_sr, audio_opt)
 
     # Конвертируем файл в стерео и выбранный пользователем формат
     display_progress(0.8, "[💫] Конвертация аудио в стерео...")
-    convert_audio(output_audio, output_audio, output_format)
+    convert_audio(output_path, output_path, output_format)
 
-    display_progress(1.0, f"[✅] Преобразование завершено — {output_audio}")
+    display_progress(1.0, f"[✅] Преобразование завершено — {output_path}")
 
     # Освобождаем память
     del hubert_model, cpt, net_g, vc
@@ -197,5 +211,5 @@ def rvc_infer(
     torch.cuda.empty_cache()
 
     if use_tts:
-        return output_audio, input_audio
-    return output_audio
+        return output_path, input_path
+    return output_path
