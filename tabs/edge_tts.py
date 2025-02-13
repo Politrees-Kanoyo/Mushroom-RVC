@@ -71,7 +71,7 @@ def show_hop_slider(pitch_detection_algo):
 
 def edge_tts_tab():
     with gr.Row():
-        with gr.Column(variant="panel", scale=2):
+        with gr.Column(variant="panel", scale=1):
             with gr.Group():
                 rvc_model = gr.Dropdown(
                     label="Голосовые модели:",
