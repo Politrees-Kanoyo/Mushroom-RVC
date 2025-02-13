@@ -183,7 +183,7 @@ def rvc_infer(
         net_g,
         0,
         audio,
-        pitch,
+        rvc_pitch,
         f0_method,
         index_path,
         index_rate,
