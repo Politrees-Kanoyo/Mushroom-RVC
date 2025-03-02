@@ -67,7 +67,7 @@ def main():
             tts_rate=args.tts_rate,
             tts_volume=args.tts_volume,
             tts_pitch=args.tts_pitch,
-            use_tts=True
+            use_tts=True,
         )
 
     print(f"\033[1;92m\nГолос успешно заменен!\n\033[0m")
