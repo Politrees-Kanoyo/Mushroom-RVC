@@ -1,5 +1,5 @@
 tenacity>=8.1.0,<10.0.0
-gradio==5.20.0
+gradio>=5.20.0
 mega.py
 pycryptodome
 https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq_fixed-0.13.0-cp311-cp311-linux_x86_64.whl
