@@ -272,15 +272,13 @@ class VC:
         """
         Основной конвейер для преобразования аудио.
         """
+        index = big_npy = None
         if file_index is not None and file_index != "" and os.path.exists(file_index) and index_rate != 0:
             try:
                 index = faiss.read_index(file_index)
                 big_npy = index.reconstruct_n(0, index.ntotal)
             except Exception as error:
                 print(f"Произошла ошибка при чтении индекса FAISS: {error}")
-                index = big_npy = None
-        else:
-            index = big_npy = None
         audio = signal.filtfilt(bh, ah, audio)
         audio_pad = np.pad(audio, (self.window // 2, self.window // 2), mode="reflect")
         opt_ts = []
