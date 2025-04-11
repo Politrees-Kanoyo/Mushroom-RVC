@@ -23,7 +23,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install ffmpeg
       run: |
@@ -32,8 +32,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install --upgrade pip==24.0
-        pip install --no-cache-dir -r requirements.txt
+        pip install --no-cache-dir -r requirements-311.txt
 
     - name: Install necessary models
       run: |
@@ -59,7 +58,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install ffmpeg
       run: |
@@ -68,8 +67,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install --upgrade pip==24.0
-        pip install --no-cache-dir -r requirements.txt
+        pip install --no-cache-dir -r requirements-311.txt
 
     - name: Install necessary models
       run: |
