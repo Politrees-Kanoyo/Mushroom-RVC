@@ -4,13 +4,9 @@ on:
   push:
     branches:
       - '*'
-    paths:
-      - 'rvc/*'
   pull_request:
     branches:
       - '*'
-    paths:
-      - 'rvc/*'
 
 jobs:
   rvc_cli:
