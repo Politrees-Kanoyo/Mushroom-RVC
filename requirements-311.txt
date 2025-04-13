@@ -1,8 +1,11 @@
 # Основные библиотеки
+requests
 numpy<2
 gradio
 einops
 mega-x
+gdown
+wget
 
 # Библиотеки для работы с аудио и видео
 ffmpeg-python>=0.2.0
