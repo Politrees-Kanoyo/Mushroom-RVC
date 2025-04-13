@@ -110,12 +110,12 @@ def convert_audio(input_audio, output_audio, output_format):
 
 # Синтезирует текст в речь с использованием edge_tts.
 async def text_to_speech(voice, text, rate, volume, pitch, output_path):
-    if not (-100 <= rate <= 100):
-        raise ValueError(f"Rate должен быть в диапазоне от -100% до +100%")
-    if not (-100 <= volume <= 100):
-        raise ValueError(f"Volume должен быть в диапазоне от -100% до +100%")
-    if not (-100 <= pitch <= 100):
-        raise ValueError(f"Pitch должен быть в диапазоне от -100Hz до +100Hz")
+    if not -100 <= rate <= 100:
+        raise ValueError("Rate должен быть в диапазоне от -100% до +100%")
+    if not -100 <= volume <= 100:
+        raise ValueError("Volume должен быть в диапазоне от -100% до +100%")
+    if not -100 <= pitch <= 100:
+        raise ValueError("Pitch должен быть в диапазоне от -100Hz до +100Hz")
 
     rate = f"+{rate}%" if rate >= 0 else f"{rate}%"
     volume = f"+{volume}%" if volume >= 0 else f"{volume}%"
@@ -151,6 +151,15 @@ def rvc_infer(
         raise ValueError("Выберите модель голоса для преобразования.")
 
     display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
+    pitch_guidance = cpt.get("f0", 1)
+
+    # Загружаем модель Hubert
+    hubert_model = load_hubert(HUBERT_BASE_PATH)
+    # Загружаем модель RVC и индекс
+    model_path, index_path = load_rvc_model(rvc_model)
+    # Получаем конвертер голоса
+    cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
+
     if use_tts:
         if not tts_text:
             raise ValueError("Введите необходимый текст в поле для ввода.")
@@ -166,18 +175,12 @@ def rvc_infer(
                 f"Не удалось найти аудиофайл {input_path}. Убедитесь, что файл загрузился или проверьте правильность пути к нему."
             )
 
+    # Построение имени выходного файла
     base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_(Converted).{output_format}")
+    output_path = os.path.join(OUTPUT_DIR, f"{base_name}_{rvc_model}.{output_format}")
 
-    # Загружаем модель Hubert
-    hubert_model = load_hubert(HUBERT_BASE_PATH)
-    # Загружаем модель RVC и индекс
-    model_path, index_path = load_rvc_model(rvc_model)
-    # Получаем конвертер голоса
-    cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
     # Загружаем аудиофайл
     audio = load_audio(input_path, 16000)
-    pitch_guidance = cpt.get("f0", 1)
 
     display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...")
     audio_opt = vc.pipeline(
