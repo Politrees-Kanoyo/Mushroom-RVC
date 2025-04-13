@@ -1,17 +1,23 @@
-tenacity>=8.1.0,<10.0.0
-gradio>=5.20.0
-mega.py
-pycryptodome
-https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq_fixed-0.13.0-cp311-cp311-linux_x86_64.whl
-tensorboardX
-faiss-cpu==1.7.3
-torchcrepe==0.0.23
-ffmpeg-python>=0.2.0
+# Основные библиотеки
+numpy<2
+gradio
 einops
-local-attention
-edge-tts
+mega-x
+
+# Библиотеки для работы с аудио и видео
+ffmpeg-python>=0.2.0
+torchcrepe==0.0.23
 PolUVR[gpu]
+edge-tts
+
+# Машинное обучение и нейронные сети
 torch==2.6
 torchaudio==2.6
 torchvision==0.21
-numpy<2
+faiss-cpu==1.7.3
+local-attention
+tensorboardX
+
+# Самостоятельно скомпилированные библиотеки
+# Исправленные или доработанные | py-3.11
+https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq_fixed-0.13.0-cp311-cp311-linux_x86_64.whl
