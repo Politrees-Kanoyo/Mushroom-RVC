@@ -22,7 +22,7 @@ class Generator(nn.Module):
         upsample_kernel_sizes,
         gin_channels=0,
     ):
-        super().__init__()
+        super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
         self.conv_pre = nn.Conv1d(initial_channel, upsample_initial_channel, 7, 1, padding=3)
@@ -42,7 +42,7 @@ class Generator(nn.Module):
                 )
             )
             ch = upsample_initial_channel // (2 ** (i + 1))
-            for _, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
+            for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.ups_and_resblocks.append(resblock(ch, k, d))
 
         self.conv_post = nn.Conv1d(ch, 1, 7, 1, padding=3, bias=False)
@@ -51,32 +51,32 @@ class Generator(nn.Module):
         if gin_channels != 0:
             self.cond = nn.Conv1d(gin_channels, upsample_initial_channel, 1)
 
-    def forward(self, x: torch.Tensor, g: Optional[torch.Tensor] = None):
-        x = self.conv_pre(x)
-        if g is not None:
-            x = x + self.cond(g)
+        def forward(self, x: torch.Tensor, g: Optional[torch.Tensor] = None):
+            x = self.conv_pre(x)
+            if g is not None:
+                x = x + self.cond(g)
 
-        resblock_idx = 0
-        for _ in range(self.num_upsamples):
-            x = F.leaky_relu(x, LRELU_SLOPE)
-            x = self.ups_and_resblocks[resblock_idx](x)
-            resblock_idx += 1
-            xs = 0
-            for _ in range(self.num_kernels):
-                xs += self.ups_and_resblocks[resblock_idx](x)
+            resblock_idx = 0
+            for _ in range(self.num_upsamples):
+                x = F.leaky_relu(x, LRELU_SLOPE)
+                x = self.ups_and_resblocks[resblock_idx](x)
                 resblock_idx += 1
-            x = xs / self.num_kernels
+                xs = 0
+                for _ in range(self.num_kernels):
+                    xs += self.ups_and_resblocks[resblock_idx](x)
+                    resblock_idx += 1
+                x = xs / self.num_kernels
 
-        x = F.leaky_relu(x)
-        x = self.conv_post(x)
-        x = torch.tanh(x)
+            x = F.leaky_relu(x)
+            x = self.conv_post(x)
+            x = torch.tanh(x)
 
-        return x
+            return x
 
     def __prepare_scriptable__(self):
         for l in self.ups_and_resblocks:
             for hook in l._forward_pre_hooks.values():
-                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                     remove_weight_norm(l)
         return self
 
@@ -93,8 +93,9 @@ class SineGen(nn.Module):
         sine_amp=0.1,
         noise_std=0.003,
         voiced_threshold=0,
+        flag_for_pulse=False,
     ):
-        super().__init__()
+        super(SineGen, self).__init__()
         self.sine_amp = sine_amp
         self.noise_std = noise_std
         self.harmonic_num = harmonic_num

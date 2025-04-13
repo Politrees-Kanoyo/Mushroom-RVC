@@ -14,7 +14,7 @@ OUT_CHANNELS = [32, 128, 512, 1024, 1024]
 
 class MultiPeriodDiscriminator(nn.Module):
     def __init__(self, use_spectral_norm=False):
-        super().__init__()
+        super(MultiPeriodDiscriminator, self).__init__()
         self.discriminators = nn.ModuleList(
             [DiscriminatorS(use_spectral_norm=use_spectral_norm)]
             + [DiscriminatorP(p, use_spectral_norm=use_spectral_norm) for p in PERIODS_V1]
@@ -35,7 +35,7 @@ class MultiPeriodDiscriminator(nn.Module):
 
 class MultiPeriodDiscriminatorV2(nn.Module):
     def __init__(self, use_spectral_norm=False):
-        super().__init__()
+        super(MultiPeriodDiscriminatorV2, self).__init__()
         self.discriminators = nn.ModuleList(
             [DiscriminatorS(use_spectral_norm=use_spectral_norm)]
             + [DiscriminatorP(p, use_spectral_norm=use_spectral_norm) for p in PERIODS_V2]
@@ -56,7 +56,7 @@ class MultiPeriodDiscriminatorV2(nn.Module):
 
 class DiscriminatorS(nn.Module):
     def __init__(self, use_spectral_norm=False):
-        super().__init__()
+        super(DiscriminatorS, self).__init__()
         norm_f = spectral_norm if use_spectral_norm else weight_norm
         self.convs = nn.ModuleList(
             [
@@ -84,7 +84,7 @@ class DiscriminatorS(nn.Module):
 
 class DiscriminatorP(nn.Module):
     def __init__(self, period, kernel_size=5, stride=3, use_spectral_norm=False):
-        super().__init__()
+        super(DiscriminatorP, self).__init__()
         self.period = period
         norm_f = spectral_norm if use_spectral_norm else weight_norm
 

@@ -21,7 +21,7 @@ class SourceModuleHnNSF(nn.Module):
         add_noise_std=0.003,
         voiced_threshod=0,
     ):
-        super().__init__()
+        super(SourceModuleHnNSF, self).__init__()
 
         self.sine_amp = sine_amp
         self.noise_std = add_noise_std
@@ -31,7 +31,7 @@ class SourceModuleHnNSF(nn.Module):
         self.l_tanh = nn.Tanh()
 
     def forward(self, x: torch.Tensor, upsample_factor: int = 1):
-        sine_wavs, _, _ = self.l_sin_gen(x, upsample_factor)
+        sine_wavs, uv, _ = self.l_sin_gen(x, upsample_factor)
         sine_wavs = sine_wavs.to(dtype=self.l_linear.weight.dtype)
         sine_merge = self.l_tanh(self.l_linear(sine_wavs))
         return sine_merge, None, None
@@ -50,7 +50,7 @@ class GeneratorNSF(nn.Module):
         gin_channels,
         sr,
     ):
-        super().__init__()
+        super(GeneratorNSF, self).__init__()
 
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
@@ -133,10 +133,10 @@ class GeneratorNSF(nn.Module):
     def __prepare_scriptable__(self):
         for l in self.ups:
             for hook in l._forward_pre_hooks.values():
-                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                     remove_weight_norm(l)
         for l in self.resblocks:
             for hook in l._forward_pre_hooks.values():
-                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                     remove_weight_norm(l)
         return self

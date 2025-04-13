@@ -27,7 +27,7 @@ class Encoder(nn.Module):
         self.norm_layers_1 = nn.ModuleList()
         self.ffn_layers = nn.ModuleList()
         self.norm_layers_2 = nn.ModuleList()
-        for _ in range(self.n_layers):
+        for i in range(self.n_layers):
             self.attn_layers.append(
                 MultiHeadAttention(
                     hidden_channels,
@@ -77,7 +77,7 @@ class TextEncoder(nn.Module):
         embedding_dim,
         f0=True,
     ):
-        super().__init__()
+        super(TextEncoder, self).__init__()
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
         self.filter_channels = filter_channels
@@ -100,7 +100,10 @@ class TextEncoder(nn.Module):
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
     def forward(self, phone: torch.Tensor, pitch: Optional[torch.Tensor], lengths: torch.Tensor):
-        x = self.emb_phone(phone) if pitch is None else self.emb_phone(phone) + self.emb_pitch(pitch)
+        if pitch is None:
+            x = self.emb_phone(phone)
+        else:
+            x = self.emb_phone(phone) + self.emb_pitch(pitch)
         x = x * math.sqrt(self.hidden_channels)
         x = self.lrelu(x)
         x = torch.transpose(x, 1, -1)
@@ -123,7 +126,7 @@ class PosteriorEncoder(nn.Module):
         n_layers,
         gin_channels=0,
     ):
-        super().__init__()
+        super(PosteriorEncoder, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
@@ -156,6 +159,6 @@ class PosteriorEncoder(nn.Module):
 
     def __prepare_scriptable__(self):
         for hook in self.enc._forward_pre_hooks.values():
-            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
+            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
                 remove_weight_norm(self.enc)
         return self

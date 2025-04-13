@@ -12,7 +12,7 @@ N_CLASS = 360
 
 class BiGRU(nn.Module):
     def __init__(self, input_features, hidden_features, num_layers):
-        super().__init__()
+        super(BiGRU, self).__init__()
         self.gru = nn.GRU(
             input_features,
             hidden_features,
@@ -27,7 +27,7 @@ class BiGRU(nn.Module):
 
 class ConvBlockRes(nn.Module):
     def __init__(self, in_channels, out_channels, momentum=0.01):
-        super().__init__()
+        super(ConvBlockRes, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -59,12 +59,13 @@ class ConvBlockRes(nn.Module):
     def forward(self, x):
         if self.is_shortcut:
             return self.conv(x) + self.shortcut(x)
-        return self.conv(x) + x
+        else:
+            return self.conv(x) + x
 
 
 class ResEncoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, n_blocks=1, momentum=0.01):
-        super().__init__()
+        super(ResEncoderBlock, self).__init__()
         self.n_blocks = n_blocks
         self.conv = nn.ModuleList()
         self.conv.append(ConvBlockRes(in_channels, out_channels, momentum))
@@ -79,7 +80,8 @@ class ResEncoderBlock(nn.Module):
             x = self.conv[i](x)
         if self.kernel_size is not None:
             return x, self.pool(x)
-        return x
+        else:
+            return x
 
 
 class Encoder(nn.Module):
@@ -93,12 +95,12 @@ class Encoder(nn.Module):
         out_channels=16,
         momentum=0.01,
     ):
-        super().__init__()
+        super(Encoder, self).__init__()
         self.n_encoders = n_encoders
         self.bn = nn.BatchNorm2d(in_channels, momentum=momentum)
         self.layers = nn.ModuleList()
         self.latent_channels = []
-        for _ in range(self.n_encoders):
+        for i in range(self.n_encoders):
             self.layers.append(ResEncoderBlock(in_channels, out_channels, kernel_size, n_blocks, momentum=momentum))
             self.latent_channels.append([out_channels, in_size])
             in_channels = out_channels
@@ -118,7 +120,7 @@ class Encoder(nn.Module):
 
 class Intermediate(nn.Module):
     def __init__(self, in_channels, out_channels, n_inters, n_blocks, momentum=0.01):
-        super().__init__()
+        super(Intermediate, self).__init__()
         self.n_inters = n_inters
         self.layers = nn.ModuleList()
         self.layers.append(ResEncoderBlock(in_channels, out_channels, None, n_blocks, momentum))
@@ -133,7 +135,7 @@ class Intermediate(nn.Module):
 
 class ResDecoderBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride, n_blocks=1, momentum=0.01):
-        super().__init__()
+        super(ResDecoderBlock, self).__init__()
         out_padding = (0, 1) if stride == (1, 2) else (1, 1)
         self.n_blocks = n_blocks
         self.conv1 = nn.Sequential(
@@ -164,7 +166,7 @@ class ResDecoderBlock(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, in_channels, n_decoders, stride, n_blocks, momentum=0.01):
-        super().__init__()
+        super(Decoder, self).__init__()
         self.layers = nn.ModuleList()
         self.n_decoders = n_decoders
         for _ in range(self.n_decoders):
@@ -188,7 +190,7 @@ class DeepUnet(nn.Module):
         in_channels=1,
         en_out_channels=16,
     ):
-        super().__init__()
+        super(DeepUnet, self).__init__()
         self.encoder = Encoder(in_channels, 128, en_de_layers, kernel_size, n_blocks, en_out_channels)
         self.intermediate = Intermediate(
             self.encoder.out_channel // 2,
@@ -216,7 +218,7 @@ class E2E(nn.Module):
         in_channels=1,
         en_out_channels=16,
     ):
-        super().__init__()
+        super(E2E, self).__init__()
         self.unet = DeepUnet(
             kernel_size,
             n_blocks,
@@ -320,11 +322,11 @@ class RMVPE0Predictor:
         cents_mapping = 20 * np.arange(N_CLASS) + 1997.3794084376191
         self.cents_mapping = np.pad(cents_mapping, (4, 4))
 
-    def mel2hidden(self, input_mel):
+    def mel2hidden(self, mel):
         with torch.no_grad():
-            n_frames = input_mel.shape[-1]
-            padded_mel = F.pad(input_mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
-            hidden = self.model(padded_mel)
+            n_frames = mel.shape[-1]
+            mel = F.pad(mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
+            hidden = self.model(mel)
             return hidden[:, :n_frames]
 
     def decode(self, hidden, thred=0.03):
@@ -335,8 +337,8 @@ class RMVPE0Predictor:
 
     def infer_from_audio(self, audio, thred=0.03):
         audio = torch.from_numpy(audio).float().to(self.device).unsqueeze(0)
-        extracted_mel = self.mel_extractor(audio, center=True)
-        hidden = self.mel2hidden(extracted_mel)
+        mel = self.mel_extractor(audio, center=True)
+        hidden = self.mel2hidden(mel)
         hidden = hidden.squeeze(0).cpu().numpy()
         f0 = self.decode(hidden, thred=thred)
         return f0

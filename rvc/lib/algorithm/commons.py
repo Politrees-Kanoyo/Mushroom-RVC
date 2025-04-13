@@ -36,13 +36,16 @@ def slice_segments(x: torch.Tensor, ids_str: torch.Tensor, segment_size: int = 4
     for i in range(x.size(0)):
         idx_str = ids_str[i].item()
         idx_end = idx_str + segment_size
-        ret[i] = x[i, idx_str:idx_end] if dim == 2 else x[i, :, idx_str:idx_end]
+        if dim == 2:
+            ret[i] = x[i, idx_str:idx_end]
+        else:
+            ret[i] = x[i, :, idx_str:idx_end]
 
     return ret
 
 
 def rand_slice_segments(x, x_lengths=None, segment_size=4):
-    b, _, t = x.size()
+    b, d, t = x.size()
     if x_lengths is None:
         x_lengths = t
     ids_str_max = x_lengths - segment_size + 1
