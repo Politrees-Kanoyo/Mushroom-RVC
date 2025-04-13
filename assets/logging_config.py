@@ -70,6 +70,18 @@ def configure_logging(enable_configure_logging=True, global_logger=False, loggin
             logging.getLogger("python_multipart").setLevel(level)
 
 
-# Пример использования функции configure_logging в основном файле:
-# from logging_config import configure_logging
-# configure_logging(enable_configure_logging=True, global_logger=True, logging_level="DEBUG")
+"""
+Пример использования функции configure_logging в основном файле:
+
+1. С полными параметрами:
+from logging_config import configure_logging
+configure_logging(enable_configure_logging=True, global_logger=False, logging_level="DEBUG")
+
+2. С сокращенными параметрами (используя значения по умолчанию для именованных аргументов):
+from logging_config import configure_logging
+configure_logging(True, False, "DEBUG")
+
+3. С параметрами по умолчанию (если не требуется особая настройка):
+from logging_config import configure_logging
+configure_logging()
+"""
