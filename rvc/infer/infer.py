@@ -151,7 +151,6 @@ def rvc_infer(
         raise ValueError("Выберите модель голоса для преобразования.")
 
     display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
-    pitch_guidance = cpt.get("f0", 1)
 
     # Загружаем модель Hubert
     hubert_model = load_hubert(HUBERT_BASE_PATH)
@@ -159,6 +158,7 @@ def rvc_infer(
     model_path, index_path = load_rvc_model(rvc_model)
     # Получаем конвертер голоса
     cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
+    pitch_guidance = cpt.get("f0", 1)
 
     if use_tts:
         if not tts_text:
