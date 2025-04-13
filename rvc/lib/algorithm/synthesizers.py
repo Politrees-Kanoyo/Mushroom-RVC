@@ -36,7 +36,7 @@ class Synthesizer(nn.Module):
         input_dim=768,
         **kwargs
     ):
-        super(Synthesizer, self).__init__()
+        super().__init__()
         self.spec_channels = spec_channels
         self.inter_channels = inter_channels
         self.hidden_channels = hidden_channels
@@ -111,14 +111,14 @@ class Synthesizer(nn.Module):
 
     def __prepare_scriptable__(self):
         for hook in self.dec._forward_pre_hooks.values():
-            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
+            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
                 remove_weight_norm(self.dec)
         for hook in self.flow._forward_pre_hooks.values():
-            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
+            if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
                 remove_weight_norm(self.flow)
         if hasattr(self, "enc_q"):
             for hook in self.enc_q._forward_pre_hooks.values():
-                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
                     remove_weight_norm(self.enc_q)
         return self
 
@@ -145,8 +145,7 @@ class Synthesizer(nn.Module):
             else:
                 o = self.dec(z_slice, g=g)
             return o, ids_slice, x_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q)
-        else:
-            return None, None, x_mask, None, (None, None, m_p, logs_p, None, None)
+        return None, None, x_mask, None, (None, None, m_p, logs_p, None, None)
 
     @torch.jit.export
     def infer(

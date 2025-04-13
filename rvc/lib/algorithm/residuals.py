@@ -31,7 +31,7 @@ def apply_mask(tensor, mask):
 
 class ResBlockBase(nn.Module):
     def __init__(self, channels, kernel_size, dilations):
-        super(ResBlockBase, self).__init__()
+        super().__init__()
         self.convs1 = nn.ModuleList([create_conv1d_layer(channels, kernel_size, d) for d in dilations])
         self.convs1.apply(init_weights)
 
@@ -55,23 +55,23 @@ class ResBlockBase(nn.Module):
 
 class ResBlock1(ResBlockBase):
     def __init__(self, channels, kernel_size=3, dilation=(1, 3, 5)):
-        super(ResBlock1, self).__init__(channels, kernel_size, dilation)
+        super().__init__(channels, kernel_size, dilation)
 
 
 class ResBlock2(ResBlockBase):
     def __init__(self, channels, kernel_size=3, dilation=(1, 3)):
-        super(ResBlock2, self).__init__(channels, kernel_size, dilation)
+        super().__init__(channels, kernel_size, dilation)
 
 
 class Log(nn.Module):
-    def forward(self, x, x_mask, reverse=False, **kwargs):
+    def forward(self, x, x_mask, reverse=False):
         if not reverse:
             y = torch.log(torch.clamp_min(x, 1e-5)) * x_mask
             logdet = torch.sum(-y, [1, 2])
             return y, logdet
-        else:
-            x = torch.exp(x) * x_mask
-            return x
+
+        x = torch.exp(x) * x_mask
+        return x
 
 
 class Flip(nn.Module):
@@ -80,8 +80,7 @@ class Flip(nn.Module):
         if not reverse:
             logdet = torch.zeros(x.size(0)).to(dtype=x.dtype, device=x.device)
             return x, logdet
-        else:
-            return x
+        return x
 
 
 class ElementwiseAffine(nn.Module):
@@ -91,15 +90,15 @@ class ElementwiseAffine(nn.Module):
         self.m = nn.Parameter(torch.zeros(channels, 1))
         self.logs = nn.Parameter(torch.zeros(channels, 1))
 
-    def forward(self, x, x_mask, reverse=False, **kwargs):
+    def forward(self, x, x_mask, reverse=False):
         if not reverse:
             y = self.m + torch.exp(self.logs) * x
             y = y * x_mask
             logdet = torch.sum(self.logs * x_mask, [1, 2])
             return y, logdet
-        else:
-            x = (x - self.m) * torch.exp(-self.logs) * x_mask
-            return x
+
+        x = (x - self.m) * torch.exp(-self.logs) * x_mask
+        return x
 
 
 class ResidualCouplingBlock(nn.Module):
@@ -113,7 +112,7 @@ class ResidualCouplingBlock(nn.Module):
         n_flows=4,
         gin_channels=0,
     ):
-        super(ResidualCouplingBlock, self).__init__()
+        super().__init__()
         self.channels = channels
         self.hidden_channels = hidden_channels
         self.kernel_size = kernel_size
@@ -123,7 +122,7 @@ class ResidualCouplingBlock(nn.Module):
         self.gin_channels = gin_channels
 
         self.flows = nn.ModuleList()
-        for i in range(n_flows):
+        for _ in range(n_flows):
             self.flows.append(
                 ResidualCouplingLayer(
                     channels,
@@ -159,7 +158,7 @@ class ResidualCouplingBlock(nn.Module):
     def __prepare_scriptable__(self):
         for i in range(self.n_flows):
             for hook in self.flows[i * 2]._forward_pre_hooks.values():
-                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "_WeightNorm":
+                if hook.__module__ == "torch.nn.utils.parametrizations.weight_norm" and hook.__class__.__name__ == "WeightNorm":
                     remove_weight_norm(self.flows[i * 2])
 
         return self
@@ -216,10 +215,10 @@ class ResidualCouplingLayer(nn.Module):
             x = torch.cat([x0, x1], 1)
             logdet = torch.sum(logs, [1, 2])
             return x, logdet
-        else:
-            x1 = (x1 - m) * torch.exp(-logs) * x_mask
-            x = torch.cat([x0, x1], 1)
-            return x
+
+        x1 = (x1 - m) * torch.exp(-logs) * x_mask
+        x = torch.cat([x0, x1], 1)
+        return x
 
     def remove_weight_norm(self):
         self.enc.remove_weight_norm()

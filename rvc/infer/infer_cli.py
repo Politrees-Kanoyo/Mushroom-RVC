@@ -58,9 +58,9 @@ def main():
     }
 
     if args.command == "rvc":
-        output = rvc_infer(**common_params, input_path=args.input_path, use_tts=False)
+        rvc_infer(**common_params, input_path=args.input_path, use_tts=False)
     elif args.command == "tts":
-        output = rvc_infer(
+        rvc_infer(
             **common_params,
             tts_voice=args.tts_voice,
             tts_text=args.tts_text,
@@ -70,7 +70,7 @@ def main():
             use_tts=True,
         )
 
-    print(f"\033[1;92m\nГолос успешно заменен!\n\033[0m")
+    print("\033[1;92m\nГолос успешно заменен!\n\033[0m")
 
 
 if __name__ == "__main__":

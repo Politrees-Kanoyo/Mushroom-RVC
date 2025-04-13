@@ -23,6 +23,7 @@ bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
 # Класс для обработки аудио
 class AudioProcessor:
     def change_rms(
+        self,
         source_audio: np.ndarray,
         source_rate: int,
         target_audio: np.ndarray,

@@ -16,7 +16,7 @@ class WaveNet(nn.Module):
         gin_channels=0,
         p_dropout=0,
     ):
-        super(WaveNet, self).__init__()
+        super().__init__()
         assert kernel_size % 2 == 1
         self.hidden_channels = hidden_channels
         self.kernel_size = (kernel_size,)
@@ -53,7 +53,7 @@ class WaveNet(nn.Module):
             res_skip_layer = weight_norm(res_skip_layer, name="weight")
             self.res_skip_layers.append(res_skip_layer)
 
-    def forward(self, x, x_mask, g=None, **kwargs):
+    def forward(self, x, x_mask, g=None):
         output = torch.zeros_like(x)
         n_channels_tensor = torch.IntTensor([self.hidden_channels])
 
