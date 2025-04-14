@@ -1,6 +1,8 @@
 from assets.logging_config import configure_logging
+from assets.model_installer import check_and_install_models
 
 configure_logging(True, False, "WARNING")
+check_and_install_models()
 
 import argparse
 
