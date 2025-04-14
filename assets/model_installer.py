@@ -2,6 +2,8 @@ import os
 
 import requests
 
+from tqdm import tqdm
+
 PREDICTORS = "https://huggingface.co/Politrees/RVC_resources/resolve/main/predictors/"
 EMBEDDERS = "https://huggingface.co/Politrees/RVC_resources/resolve/main/embedders/pytorch/"
 
@@ -14,30 +16,42 @@ os.makedirs(EMBEDDERS_DIR, exist_ok=True)
 
 
 def dl_model(link, model_name, dir_name):
-    if os.path.exists(os.path.join(dir_name, model_name)):
+    file_path = os.path.join(dir_name, model_name)
+    if os.path.exists(file_path):
         print(f"{model_name} уже существует. Пропускаем установку.")
         return
 
     r = requests.get(f"{link}{model_name}", stream=True)
     r.raise_for_status()
-    with open(os.path.join(dir_name, model_name), "wb") as f:
+
+    # Получаем общий размер файла
+    total_size = int(r.headers.get('content-length', 0))
+    # Используем tqdm для отображения прогресса
+    with open(file_path, "wb") as f, tqdm(
+        desc=f"Установка {model_name}...",
+        total=total_size,
+        unit='iB',
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
         for chunk in r.iter_content(chunk_size=8192):
             f.write(chunk)
+            bar.update(len(chunk))
 
 
-if __name__ == "__main__":
+def check_and_install_models():
     try:
         predictors_names = ["rmvpe.pt", "fcpe.pt"]
         for model in predictors_names:
-            print(f"Установка {model}...")
+            print(f"Проверка {model}...")
             dl_model(PREDICTORS, model, PREDICTORS_DIR)
 
         embedder_names = ["hubert_base.pt"]
         for model in embedder_names:
-            print(f"Установка {model}...")
+            print(f"Проверка {model}...")
             dl_model(EMBEDDERS, model, EMBEDDERS_DIR)
 
-        print("Все модели успешно установлены!")
+        print("Все модели успешно установлены или уже существуют!")
     except requests.exceptions.RequestException as e:
         print(f"Произошла ошибка при загрузке модели: {e}")
     except Exception as e:

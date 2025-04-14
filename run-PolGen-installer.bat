@@ -16,7 +16,6 @@ call :install_miniconda
 call :create_conda_env
 call :install_dependencies
 call :download_ffmpeg
-call :installing_necessary_models
 
 cls
 echo PolGen has been installed successfully!
@@ -91,28 +90,6 @@ powershell -Command "& {Invoke-WebRequest -Uri 'https://huggingface.co/Politrees
 if not exist "ffprobe.exe" goto :download_error
 
 echo ffmpeg and ffprobe downloaded successfully.
-echo.
-exit /b 0
-
-:installing_necessary_models
-cls
-echo Checking for required models...
-set "hubert_base=%PRINCIPAL%\rvc\models\embedders\hubert_base.pt"
-set "fcpe=%PRINCIPAL%\rvc\models\predictors\fcpe.pt"
-set "rmvpe=%PRINCIPAL%\rvc\models\predictors\rmvpe.pt"
-
-if exist "%hubert_base%" (
-    if exist "%fcpe%" (
-        if exist "%rmvpe%" (
-            echo All required models are installed.
-        )
-    )
-) else (
-    echo Required models were not found. Installing models...
-    echo.
-    env\python download_models.py
-    if errorlevel 1 goto :download_error
-)
 echo.
 exit /b 0
 

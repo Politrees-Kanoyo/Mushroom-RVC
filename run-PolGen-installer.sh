@@ -108,30 +108,10 @@ install_ffmpeg_flatpak() {
     fi
 }
 
-installing_necessary_models() {
-    echo "Checking for required models..."
-    HUBERT_BASE="$PRINCIPAL/rvc/models/embedders/hubert_base.pt"
-    FCPE="$PRINCIPAL/rvc/models/predictors/fcpe.pt"
-    RMVPE="$PRINCIPAL/rvc/models/predictors/rmvpe.pt"
-
-    if [ -f "$HUBERT_BASE" ] && [ -f "$FCPE" ] && [ -f "$RMVPE" ]; then
-        echo "All required models are installed."
-    else
-        echo "Required models were not found. Installing models..."
-        "$ENV_DIR/bin/python" download_models.py
-        if [ $? -ne 0 ]; then
-            echo "Model installation failed."
-            exit 1
-        fi
-    fi
-    echo
-}
-
 install_miniconda
 create_conda_env
 install_dependencies
 install_ffmpeg
-installing_necessary_models
 
 echo "PolGen has been installed successfully!"
 echo "To start PolGen, please run './PolGen.sh'."

@@ -32,7 +32,6 @@ jobs:
 
     - name: Install necessary models
       run: |
-        python download_models.py
         python3 -m rvc.modules.model_manager "https://huggingface.co/Politrees/Victor_Tsoi/resolve/main/Victor_Tsoi.zip?download=true" "Tsoi"
 
     - name: Set up test audio
@@ -67,7 +66,6 @@ jobs:
 
     - name: Install necessary models
       run: |
-        python download_models.py
         python3 -m rvc.modules.model_manager "https://huggingface.co/Politrees/Victor_Tsoi/resolve/main/Victor_Tsoi.zip?download=true" "Tsoi"
 
     - name: Run tts script

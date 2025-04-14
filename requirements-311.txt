@@ -6,6 +6,7 @@ einops
 mega-x
 gdown
 wget
+tqdm
 
 # Библиотеки для работы с аудио и видео
 ffmpeg-python>=0.2.0
