@@ -119,7 +119,6 @@ class VC:
         pitch,
         f0_method,
         hop_length,
-        inp_f0=None,
         f0_min=50,
         f0_max=1100,
     ):
@@ -154,12 +153,6 @@ class VC:
             raise ValueError("Метод F0 не распознан или не смог рассчитать F0.")
 
         f0 *= pow(2, pitch / 12)
-        tf0 = self.sample_rate // self.window
-        if inp_f0 is not None:
-            delta_t = np.round((inp_f0[:, 0].max() - inp_f0[:, 0].min()) * tf0 + 1).astype("int16")
-            replace_f0 = np.interp(list(range(delta_t)), inp_f0[:, 0] * 100, inp_f0[:, 1])
-            shape = f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)].shape[0]
-            f0[self.x_pad * tf0 : self.x_pad * tf0 + len(replace_f0)] = replace_f0[:shape]
         f0bak = f0.copy()
         f0_mel = 1127 * np.log(1 + f0 / 700)
         f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (f0_mel_max - f0_mel_min) + 1
@@ -266,7 +259,6 @@ class VC:
         version,
         protect,
         hop_length,
-        f0_file,
         f0_min=50,
         f0_max=1100,
     ):
@@ -301,17 +293,6 @@ class VC:
         t = None
         audio_pad = np.pad(audio, (self.t_pad, self.t_pad), mode="reflect")
         p_len = audio_pad.shape[0] // self.window
-        inp_f0 = None
-        if hasattr(f0_file, "name"):
-            try:
-                with open(f0_file.name, "r") as f:
-                    lines = f.read().strip("\n").split("\n")
-                inp_f0 = []
-                for line in lines:
-                    inp_f0.append([float(i) for i in line.split(",")])
-                inp_f0 = np.array(inp_f0, dtype="float32")
-            except Exception as error:
-                print(f"Произошла ошибка при чтении файла F0: {error}")
         sid = torch.tensor(sid, device=self.device).unsqueeze(0).long()
         if pitch_guidance:
             pitch, pitchf = self.get_f0(
@@ -320,7 +301,6 @@ class VC:
                 pitch,
                 f0_method,
                 hop_length,
-                inp_f0,
                 f0_min,
                 f0_max,
             )

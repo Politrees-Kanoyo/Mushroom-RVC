@@ -199,7 +199,6 @@ def rvc_infer(
         version,
         protect,
         hop_length,
-        f0_file=None,
         f0_min=f0_min,
         f0_max=f0_max,
     )
