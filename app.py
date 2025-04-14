@@ -7,10 +7,10 @@ from typing import Any
 
 import gradio as gr
 
+from PolUVR.utils import PolUVR_UI
 from tabs.edge_tts import edge_tts_tab
 from tabs.inference import inference_tab
 from tabs.install import files_upload, install_hubert_tab, output_message, url_zip_download, zip_upload
-from tabs.uvr import poluvr_tab
 from tabs.welcome import welcome_tab
 
 DEFAULT_SERVER_NAME = "127.0.0.1"
@@ -51,7 +51,8 @@ with gr.Blocks(
             gr.HTML(
                 "<center><h3>PolUVR не будет функционировать без подключения к интернету, если вы ранее не установили необходимые модели.</h3></center>"
             )
-        poluvr_tab()
+        # https://github.com/Bebra777228/PolUVR?tab=readme-ov-file#integrate-our-interface-into-your-gradio-projects
+        PolUVR_UI("models/UVR_models", "output/UVR_output")
 
     with gr.Tab("Загрузка моделей"):
         if not is_offline_mode():
