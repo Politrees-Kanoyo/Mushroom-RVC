@@ -67,6 +67,7 @@ def configure_logging(enable_configure_logging=True, global_logger=False, loggin
             logging.getLogger("asyncio").setLevel(level)
             logging.getLogger("httpcore").setLevel(level)
             logging.getLogger("matplotlib").setLevel(level)
+            logging.getLogger("onnx2torch").setLevel(level)
             logging.getLogger("python_multipart").setLevel(level)
 
 
