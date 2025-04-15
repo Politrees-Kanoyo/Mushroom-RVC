@@ -9,7 +9,7 @@ echo.
 set "PRINCIPAL=%cd%"
 set "MINICONDA_DIR=%UserProfile%\Miniconda3"
 set "ENV_DIR=%PRINCIPAL%\env"
-set "MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-py310_24.11.1-0-Windows-x86_64.exe"
+set "MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-py311_25.1.1-2-Windows-x86_64.exe"
 set "CONDA_EXE=%MINICONDA_DIR%\Scripts\conda.exe"
 
 call :install_miniconda
@@ -45,19 +45,10 @@ exit /b 0
 :create_conda_env
 cls
 echo Creating Conda environment...
-call "%MINICONDA_DIR%\_conda.exe" create --no-shortcuts -y -k --prefix "%ENV_DIR%" python=3.10
+call "%MINICONDA_DIR%\_conda.exe" create --no-shortcuts -y -k --prefix "%ENV_DIR%" python=3.11
 if errorlevel 1 goto :error
 echo Conda environment created successfully.
 echo.
-
-if exist "%ENV_DIR%\python.exe" (
-	cls
-    echo Installing specific pip version...
-    "%ENV_DIR%\python.exe" -m pip install "pip<24.1"
-    if errorlevel 1 goto :error
-    echo Pip installation complete.
-    echo.
-)
 exit /b 0
 
 :install_dependencies
@@ -66,7 +57,7 @@ echo Installing dependencies...
 call "%MINICONDA_DIR%\condabin\conda.bat" activate "%ENV_DIR%" || goto :error
 pip install --upgrade setuptools || goto :error
 pip install -r "%PRINCIPAL%\requirements.txt" || goto :error
-pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --upgrade --index-url https://download.pytorch.org/whl/cu121 || goto :error
+pip install torch==2.6.0 torchaudio==2.6.0 torchvision==0.21.0 --upgrade --index-url https://download.pytorch.org/whl/cu121 || goto :error
 call "%MINICONDA_DIR%\condabin\conda.bat" deactivate
 echo Dependencies installation complete.
 echo.
