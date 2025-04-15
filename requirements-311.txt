@@ -24,4 +24,5 @@ tensorboardX
 
 # Самостоятельно скомпилированные библиотеки
 # Исправленные или доработанные | py-3.11
-https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq_fixed-0.13.0-cp311-cp311-linux_x86_64.whl
+https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-linux_x86_64.whl; sys_platform == 'linux'
+https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-win_amd64.whl; sys_platform == 'win32'
