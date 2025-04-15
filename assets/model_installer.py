@@ -18,8 +18,7 @@ os.makedirs(EMBEDDERS_DIR, exist_ok=True)
 def dl_model(link, model_name, dir_name):
     file_path = os.path.join(dir_name, model_name)
     if os.path.exists(file_path):
-        print(f"{model_name} уже существует. Пропускаем установку.")
-        return
+        return  # Пропускаем загрузку, если файл уже существует
 
     r = requests.get(f"{link}{model_name}", stream=True)
     r.raise_for_status()
@@ -43,15 +42,12 @@ def check_and_install_models():
     try:
         predictors_names = ["rmvpe.pt", "fcpe.pt"]
         for model in predictors_names:
-            print(f"Проверка {model}...")
             dl_model(PREDICTORS, model, PREDICTORS_DIR)
 
         embedder_names = ["hubert_base.pt"]
         for model in embedder_names:
-            print(f"Проверка {model}...")
             dl_model(EMBEDDERS, model, EMBEDDERS_DIR)
 
-        print("Все модели успешно установлены или уже существуют!")
     except requests.exceptions.RequestException as e:
         print(f"Произошла ошибка при загрузке модели: {e}")
     except Exception as e:

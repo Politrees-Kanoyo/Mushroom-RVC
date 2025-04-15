@@ -4,6 +4,8 @@ from assets.model_installer import check_and_install_models
 configure_logging(True, False, "WARNING")
 check_and_install_models()
 
+print("\nЗапуск интерфейса PolGen. Подождите...\n")
+
 import sys
 from typing import Any
 
