@@ -28,7 +28,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install --no-cache-dir -r requirements-311.txt
+        pip install --no-cache-dir -r requirements.txt
 
     - name: Install necessary models
       run: |
@@ -62,7 +62,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install --no-cache-dir -r requirements-311.txt
+        pip install --no-cache-dir -r requirements.txt
 
     - name: Install necessary models
       run: |

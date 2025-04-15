@@ -1,20 +1,28 @@
+# Основные библиотеки
 requests
-tensorboardX
-fairseq==0.12.2
-faiss-cpu==1.7.3
-numpy==1.23.5
-ffmpeg-python>=0.2.0
-praat-parselmouth>=0.4.2
-pyworld==0.3.4
-torchcrepe==0.0.23
-edge-tts
+numpy<2
+gradio
 einops
-local-attention
-gradio>=5.20.0
-mega.py
-wget
+mega-x
 gdown
+wget
+tqdm
+
+# Библиотеки для работы с аудио и видео
+ffmpeg-python>=0.2.0
+torchcrepe==0.0.23
 PolUVR[gpu]
-torch<2.6
-torchaudio<2.6
-torchvision<0.21
+edge-tts
+
+# Машинное обучение и нейронные сети
+torch==2.6
+torchaudio==2.6
+torchvision==0.21
+faiss-cpu==1.7.3
+local-attention
+tensorboardX
+
+# Условные зависимости
+fairseq; python_version < '3.11'
+https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.11'
+https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-win_amd64.whl; sys_platform == 'win32' and python_version == '3.11'
