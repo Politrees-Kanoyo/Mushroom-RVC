@@ -28,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip==24.0
-        pip install requests gdown mega.py gradio
+        pip install requests gdown mega-x gradio
 
     - name: Google Drive
       run: |
