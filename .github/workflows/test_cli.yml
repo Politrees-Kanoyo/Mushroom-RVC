@@ -30,7 +30,7 @@ jobs:
       run: |
         pip install --no-cache-dir -r requirements.txt
 
-    - name: Install necessary models
+    - name: Install RVC models
       run: |
         python3 -m rvc.modules.model_manager "https://huggingface.co/Politrees/Victor_Tsoi/resolve/main/Victor_Tsoi.zip?download=true" "Tsoi"
 
@@ -64,7 +64,7 @@ jobs:
       run: |
         pip install --no-cache-dir -r requirements.txt
 
-    - name: Install necessary models
+    - name: Install RVC models
       run: |
         python3 -m rvc.modules.model_manager "https://huggingface.co/Politrees/Victor_Tsoi/resolve/main/Victor_Tsoi.zip?download=true" "Tsoi"
 

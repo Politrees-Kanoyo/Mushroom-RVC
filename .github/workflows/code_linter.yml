@@ -21,11 +21,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip==24.0
           pip install flake8 pylint vulture
           pip install -r requirements.txt
 
