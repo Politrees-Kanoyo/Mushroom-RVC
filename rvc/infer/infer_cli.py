@@ -6,7 +6,7 @@ check_and_install_models()
 
 import argparse
 
-from rvc.infer.infer import rvc_infer, rvc_edgetts_infer
+from rvc.infer.infer import rvc_edgetts_infer, rvc_infer
 
 
 def create_parser():

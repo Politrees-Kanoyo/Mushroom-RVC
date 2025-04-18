@@ -1,10 +1,17 @@
-import os
-import re
-
 import gradio as gr
 
-from rvc.infer.infer import rvc_infer, rvc_edgetts_infer
-from tabs.components.modules import OUTPUT_FORMAT, update_edge_voices, edge_voices, update_models_list, process_file_upload, show_hop_slider, swap_visibility, swap_buttons, get_folders
+from rvc.infer.infer import rvc_edgetts_infer, rvc_infer
+from tabs.components.modules import (
+    OUTPUT_FORMAT,
+    edge_voices,
+    get_folders,
+    process_file_upload,
+    show_hop_slider,
+    swap_buttons,
+    swap_visibility,
+    update_edge_voices,
+    update_models_list,
+)
 from tabs.components.settings import settings
 
 

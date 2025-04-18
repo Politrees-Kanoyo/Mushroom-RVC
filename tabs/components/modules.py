@@ -5,7 +5,6 @@ import gradio as gr
 
 from rvc.infer.infer import RVC_MODELS_DIR
 
-
 OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
 edge_voices = {
