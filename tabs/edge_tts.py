@@ -3,7 +3,7 @@ import re
 
 import gradio as gr
 
-from rvc.infer.infer import RVC_MODELS_DIR, rvc_infer
+from rvc.infer.infer import RVC_MODELS_DIR, rvc_edgetts_infer
 
 OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
 
@@ -253,10 +253,9 @@ def edge_tts_tab():
 
     ref_btn.click(update_models_list, None, outputs=rvc_model)
     generate_btn.click(
-        rvc_infer,
+        rvc_edgetts_infer,
         inputs=[
             rvc_model,
-            gr.Textbox(visible=False),  # input_audio
             f0_method,
             f0_min,
             f0_max,
@@ -266,7 +265,6 @@ def edge_tts_tab():
             index_rate,
             volume_envelope,
             output_format,
-            gr.Checkbox(value=True, visible=False),  # use_tts
             tts_voice,
             tts_text,
             tts_rate,

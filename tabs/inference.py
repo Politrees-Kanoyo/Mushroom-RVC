@@ -232,12 +232,6 @@ def inference_tab():
             index_rate,
             volume_envelope,
             output_format,
-            gr.Checkbox(value=False, visible=False),  # use_tts
-            gr.Dropdown(visible=False),  # tts_voice
-            gr.Textbox(visible=False),  # tts_text
-            gr.Slider(value=0, visible=False),  # tts_rate
-            gr.Slider(value=0, visible=False),  # tts_volume
-            gr.Slider(value=0, visible=False),  # tts_pitch
         ],
         outputs=[converted_voice],
     )

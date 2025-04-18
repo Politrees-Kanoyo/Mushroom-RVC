@@ -6,7 +6,7 @@ check_and_install_models()
 
 import argparse
 
-from rvc.infer.infer import rvc_infer
+from rvc.infer.infer import rvc_infer, rvc_edgetts_infer
 
 
 def create_parser():
@@ -60,16 +60,15 @@ def main():
     }
 
     if args.command == "rvc":
-        rvc_infer(**common_params, input_path=args.input_path, use_tts=False)
+        rvc_infer(**common_params, input_path=args.input_path)
     elif args.command == "tts":
-        rvc_infer(
+        rvc_edgetts_infer(
             **common_params,
             tts_voice=args.tts_voice,
             tts_text=args.tts_text,
             tts_rate=args.tts_rate,
             tts_volume=args.tts_volume,
             tts_pitch=args.tts_pitch,
-            use_tts=True,
         )
 
     print("\033[1;92m\nГолос успешно заменен!\n\033[0m")
