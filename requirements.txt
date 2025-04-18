@@ -23,7 +23,6 @@ local-attention
 tensorboardX
 
 # Условные зависимости
-pip<=24.0; python_version < '3.11'
 fairseq; python_version < '3.11'
 https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.11'
 https://github.com/Bebra777228/TrainVocModel-EN/releases/download/fixed-packages/fairseq-0.12.3-cp311-cp311-win_amd64.whl; sys_platform == 'win32' and python_version == '3.11'
