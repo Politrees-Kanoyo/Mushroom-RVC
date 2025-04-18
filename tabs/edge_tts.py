@@ -3,70 +3,9 @@ import re
 
 import gradio as gr
 
-from rvc.infer.infer import RVC_MODELS_DIR, rvc_edgetts_infer
-
-OUTPUT_FORMAT = ["wav", "flac", "mp3", "ogg", "opus", "m4a", "aiff", "ac3"]
-
-
-edge_voices = {
-    "Английский (Великобритания)": ["en-GB-SoniaNeural", "en-GB-RyanNeural"],
-    "Английский (США)": ["en-US-JennyNeural", "en-US-GuyNeural"],
-    "Арабский (Египет)": ["ar-EG-SalmaNeural", "ar-EG-ShakirNeural"],
-    "Арабский (Саудовская Аравия)": ["ar-SA-HamedNeural", "ar-SA-ZariyahNeural"],
-    "Бенгальский (Бангладеш)": ["bn-BD-RubaiyatNeural", "bn-BD-KajalNeural"],
-    "Венгерский": ["hu-HU-TamasNeural", "hu-HU-NoemiNeural"],
-    "Вьетнамский": ["vi-VN-HoaiMyNeural", "vi-VN-HuongNeural"],
-    "Греческий": ["el-GR-AthinaNeural", "el-GR-NestorasNeural"],
-    "Датский": ["da-DK-PernilleNeural", "da-DK-MadsNeural"],
-    "Иврит": ["he-IL-AvriNeural", "he-IL-HilaNeural"],
-    "Испанский (Испания)": ["es-ES-ElviraNeural", "es-ES-AlvaroNeural"],
-    "Испанский (Мексика)": ["es-MX-DaliaNeural", "es-MX-JorgeNeural"],
-    "Итальянский": ["it-IT-ElsaNeural", "it-IT-DiegoNeural"],
-    "Китайский (упрощенный)": ["zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"],
-    "Корейский": ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"],
-    "Немецкий": ["de-DE-KatjaNeural", "de-DE-ConradNeural"],
-    "Нидерландский": ["nl-NL-ColetteNeural", "nl-NL-FennaNeural"],
-    "Норвежский": ["nb-NO-PernilleNeural", "nb-NO-FinnNeural"],
-    "Польский": ["pl-PL-MajaNeural", "pl-PL-JacekNeural"],
-    "Португальский (Бразилия)": ["pt-BR-FranciscaNeural", "pt-BR-AntonioNeural"],
-    "Португальский (Португалия)": ["pt-PT-RaquelNeural", "pt-PT-DuarteNeural"],
-    "Румынский": ["ro-RO-EmilNeural", "ro-RO-AndreiNeural"],
-    "Русский": ["ru-RU-SvetlanaNeural", "ru-RU-DmitryNeural"],
-    "Тагальский": ["tl-PH-AngeloNeural", "tl-PH-TessaNeural"],
-    "Тамильский": ["ta-IN-ValluvarNeural", "ta-IN-KannanNeural"],
-    "Тайский": ["th-TH-PremwadeeNeural", "th-TH-NiwatNeural"],
-    "Турецкий": ["tr-TR-AhmetNeural", "tr-TR-EmelNeural"],
-    "Украинский": ["uk-UA-OstapNeural", "uk-UA-PolinaNeural"],
-    "Филиппинский": ["fil-PH-AngeloNeural", "fil-PH-TessaNeural"],
-    "Финский": ["fi-FI-NooraNeural", "fi-FI-SelmaNeural"],
-    "Французский (Канада)": ["fr-CA-SylvieNeural", "fr-CA-AntoineNeural"],
-    "Французский (Франция)": ["fr-FR-DeniseNeural", "fr-FR-HenriNeural"],
-    "Чешский": ["cs-CZ-VlastaNeural", "cs-CZ-AntoninNeural"],
-    "Шведский": ["sv-SE-HilleviNeural", "sv-SE-MattiasNeural"],
-    "Японский": ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"],
-}
-
-
-def update_edge_voices(selected_language):
-    voices = edge_voices[selected_language]
-    return gr.update(choices=voices, value=voices[0] if voices else None)
-
-
-def get_folders(models_dir):
-    return sorted(
-        (item for item in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, item))),
-        key=lambda x: [int(text) if text.isdigit() else text.lower() for text in re.split("([0-9]+)", x)],
-    )
-
-
-def update_models_list():
-    return gr.update(choices=get_folders(RVC_MODELS_DIR))
-
-
-def show_hop_slider(pitch_detection_algo):
-    if pitch_detection_algo in ["crepe", "crepe-tiny"]:
-        return gr.update(visible=True)
-    return gr.update(visible=False)
+from rvc.infer.infer import rvc_edgetts_infer
+from tabs.components.modules import OUTPUT_FORMAT, update_edge_voices, get_folders, update_models_list, show_hop_slider, edge_voices
+from tabs.components.settings import settings
 
 
 def edge_tts_tab():
@@ -75,7 +14,7 @@ def edge_tts_tab():
             with gr.Group():
                 rvc_model = gr.Dropdown(
                     label="Голосовые модели:",
-                    choices=get_folders(RVC_MODELS_DIR),
+                    choices=get_folders(),
                     interactive=True,
                     visible=True,
                 )
@@ -157,7 +96,7 @@ def edge_tts_tab():
                 visible=True,
                 scale=2,
             )
-            converted_tts_voice = gr.Audio(
+            converted_synth_voice = gr.Audio(
                 label="Преобразованный TTS голос",
                 interactive=False,
                 visible=True,
@@ -172,86 +111,19 @@ def edge_tts_tab():
                     visible=True,
                 )
 
-    with gr.Accordion("Настройки преобразования", open=False):
-        with gr.Column(variant="panel"):
-            with gr.Accordion("Стандартные настройки", open=False):
-                with gr.Group():
-                    with gr.Column():
-                        f0_method = gr.Dropdown(
-                            value="rmvpe",
-                            label="Метод выделения тона",
-                            choices=["rmvpe", "fcpe", "crepe", "crepe-tiny"],
-                            interactive=True,
-                            visible=True,
-                        )
-                        hop_length = gr.Slider(
-                            minimum=8,
-                            maximum=512,
-                            step=8,
-                            value=128,
-                            label="Длина шага",
-                            info="Меньшие значения приводят к более длительным преобразованиям, что увеличивает риск появления артефактов в голосе, однако при этом достигается более точная передача тона.",
-                            interactive=True,
-                            visible=False,
-                        )
-                        index_rate = gr.Slider(
-                            minimum=0,
-                            maximum=1,
-                            step=0.1,
-                            value=0,
-                            label="Влияние индекса",
-                            info="Влияние, оказываемое индексным файлом; Чем выше значение, тем больше влияние. Однако выбор более низких значений может помочь смягчить артефакты, присутствующие в аудио.",
-                            interactive=True,
-                            visible=True,
-                        )
-                        volume_envelope = gr.Slider(
-                            minimum=0,
-                            maximum=1,
-                            step=0.01,
-                            value=1,
-                            label="Скорость смешивания RMS",
-                            info="Заменить или смешать с огибающей громкости выходного сигнала. Чем ближе значение к 1, тем больше используется огибающая выходного сигнала.",
-                            interactive=True,
-                            visible=True,
-                        )
-                        protect = gr.Slider(
-                            minimum=0,
-                            maximum=0.5,
-                            step=0.01,
-                            value=0.5,
-                            label="Защита согласных",
-                            info="Защитить согласные и звуки дыхания, чтобы избежать электроакустических разрывов и артефактов. Максимальное значение параметра 0.5 обеспечивает полную защиту. Уменьшение этого значения может снизить защиту, но уменьшить эффект индексирования.",
-                            interactive=True,
-                            visible=True,
-                        )
+    # Компонент настроек
+    f0_method, hop_length, index_rate, volume_envelope, protect, f0_min, f0_max = settings()
 
-            with gr.Accordion("Лополнительные настройки", open=False):
-                with gr.Column():
-                    with gr.Row():
-                        f0_min = gr.Slider(
-                            minimum=1,
-                            maximum=120,
-                            step=1,
-                            value=50,
-                            label="Минимальный диапазон тона",
-                            info="Определяет нижнюю границу диапазона тона, который алгоритм будет использовать для определения основной частоты (F0) в аудиосигнале.",
-                            interactive=True,
-                            visible=True,
-                        )
-                        f0_max = gr.Slider(
-                            minimum=380,
-                            maximum=16000,
-                            step=1,
-                            value=1100,
-                            label="Максимальный диапазон тона",
-                            info="Определяет верхнюю границу диапазона тона, который алгоритм будет использовать для определения основной частоты (F0) в аудиосигнале.",
-                            interactive=True,
-                            visible=True,
-                        )
-
+    # Обновление списка TTS-голосов
     language.change(update_edge_voices, inputs=language, outputs=tts_voice)
 
+    # Показать hop_length
+    f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)
+
+    # Обновление списка моделей
     ref_btn.click(update_models_list, None, outputs=rvc_model)
+
+    # Запуск процесса преобразования
     generate_btn.click(
         rvc_edgetts_infer,
         inputs=[
@@ -271,5 +143,5 @@ def edge_tts_tab():
             tts_volume,
             tts_pitch,
         ],
-        outputs=[converted_tts_voice, synth_voice],
+        outputs=[synth_voice, converted_synth_voice],
     )
