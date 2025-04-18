@@ -32,6 +32,7 @@ config = Config()
 def display_progress(percent, message, progress=gr.Progress()):
     progress(percent, desc=message)
 
+
 def print_display_progress(percent, message, progress=gr.Progress()):
     print(message)
     progress(percent, desc=message)
@@ -164,7 +165,7 @@ def rvc_infer(
     base_name = os.path.splitext(os.path.basename(input_path))[0]
     if len(base_name) > 50:
         gr.Warning("Имя файла превышает 50 символов и будет сокращено для удобства использования.")
-        base_name = "Made_in_PolGen" # Сменить имя файла, если длина исходного более 50 символов
+        base_name = "Made_in_PolGen"  # Сменить имя файла, если длина исходного более 50 символов
     output_path = os.path.join(OUTPUT_DIR, f"{base_name}_({rvc_model}).{output_format}")
 
     # Загружаем аудиофайл
