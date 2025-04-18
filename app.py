@@ -11,11 +11,12 @@ from typing import Any
 
 import gradio as gr
 
-from PolUVR.utils import PolUVR_UI
-from tabs.edge_tts import edge_tts_tab
-from tabs.inference import inference_tab
+from tabs.inference import inference_tab, edge_tts_tab
 from tabs.install import files_upload, install_hubert_tab, output_message, url_zip_download, zip_upload
 from tabs.welcome import welcome_tab
+
+from PolUVR.utils import PolUVR_UI
+
 
 DEFAULT_SERVER_NAME = "127.0.0.1"
 DEFAULT_PORT = 4000
