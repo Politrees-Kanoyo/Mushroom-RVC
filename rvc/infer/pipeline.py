@@ -89,7 +89,7 @@ class VC:
             del model
         elif f0_method == "fcpe":
             model = FCPE(device=self.device, sample_rate=self.sample_rate, hop_size=self.window)
-            f0 = model.get_f0(x, p_len, filter_radius = 0.006)
+            f0 = model.get_f0(x, p_len, filter_radius=0.006)
             del model
 
         if f0 is None:
@@ -177,7 +177,7 @@ class VC:
             del hasp, arg
 
         if protect < 0.5 and pitch is not None and pitchf is not None:
-            del feats0 
+            del feats0
         del feats, padding_mask
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
