@@ -1,10 +1,20 @@
 import os
 
+import numpy as np
 import torch
 import torchcrepe
 from torchfcpe import spawn_bundled_infer_model
 
 from rvc.lib.predictors.RMVPE import RMVPE0Predictor
+
+
+def median_interp_pitch(f0):
+    f0 = np.where(f0 == 0, np.nan, f0)
+    return float(np.median(np.interp(np.arange(len(f0)), np.where(~np.isnan(f0))[0], f0[~np.isnan(f0)])))
+
+
+def calc_pitch_shift(f0, target_f0=155.0, limit_f0=12):
+    return max(-limit_f0, min(limit_f0, int(np.round(12 * np.log2(target_f0 / median_interp_pitch(f0))))))
 
 
 class RMVPE:

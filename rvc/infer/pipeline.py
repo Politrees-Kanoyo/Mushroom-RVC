@@ -10,7 +10,7 @@ import torchcrepe
 from scipy import signal
 from torch import Tensor
 
-from rvc.lib.predictors.f0 import CREPE, FCPE, RMVPE
+from rvc.lib.predictors.f0 import CREPE, FCPE, RMVPE, calc_pitch_shift
 
 # Фильтр Баттерворта для высоких частот
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
@@ -63,10 +63,12 @@ class VC:
         x,
         p_len,
         pitch,
+        f0_min,
+        f0_max,
         f0_method,
         hop_length,
-        f0_min=50,
-        f0_max=1100,
+        autopitch,
+        autopitch_threshold,
     ):
         """
         Получает F0 с использованием выбранного метода.
@@ -94,6 +96,9 @@ class VC:
 
         if f0 is None:
             raise ValueError("Метод F0 не распознан или не смог рассчитать F0.")
+
+        if autopitch:
+            pitch += calc_pitch_shift(f0, autopitch_threshold, 12)
 
         f0 *= pow(2, pitch / 12)
         f0bak = f0.copy()
@@ -190,6 +195,8 @@ class VC:
         sid,
         audio,
         pitch,
+        f0_min,
+        f0_max,
         f0_method,
         file_index,
         index_rate,
@@ -198,8 +205,8 @@ class VC:
         version,
         protect,
         hop_length,
-        f0_min=50,
-        f0_max=1100,
+        autopitch,
+        autopitch_threshold,
     ):
         """
         Основной конвейер для преобразования аудио.
@@ -240,10 +247,12 @@ class VC:
                 audio_pad,
                 p_len,
                 pitch,
-                f0_method,
-                hop_length,
                 f0_min,
                 f0_max,
+                f0_method,
+                hop_length,
+                autopitch,
+                autopitch_threshold,
             )
             pitch = pitch[:p_len]
             pitchf = pitchf[:p_len]

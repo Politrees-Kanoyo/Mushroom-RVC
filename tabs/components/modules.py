@@ -83,3 +83,12 @@ def swap_visibility():
 
 def swap_buttons():
     return gr.update(visible=False), gr.update(visible=True)
+
+
+def update_pitch_ui(autopitch):
+    if autopitch:
+        # Включен autopitch: показываем threshold, скрываем pitch, сбрасываем значение
+        return gr.update(visible=True), gr.update(visible=False, value=0)
+    else:
+        # Выключен autopitch: скрываем threshold, показываем pitch, сбрасываем значение
+        return gr.update(visible=False), gr.update(visible=True, value=0)

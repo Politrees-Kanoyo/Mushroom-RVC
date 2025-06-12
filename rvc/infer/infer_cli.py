@@ -16,11 +16,13 @@ def create_parser():
     base_parser.add_argument("--f0_method", type=str, default="rmvpe", help="Метод извлечения F0")
     base_parser.add_argument("--f0_min", type=int, default=50, help="Минимальная частота F0")
     base_parser.add_argument("--f0_max", type=int, default=1100, help="Максимальная частота F0")
-    base_parser.add_argument("--hop_length", type=int, default=128, help="Длина шага для обработки")
+    base_parser.add_argument("--hop_length", type=int, default=128, help="Длина шага для обработки Crepe")
     base_parser.add_argument("--rvc_pitch", type=float, default=0, help="Высота тона RVC модели")
     base_parser.add_argument("--protect", type=float, default=0.5, help="Защита согласных")
     base_parser.add_argument("--index_rate", type=float, default=0, help="Коэффициент индекса")
     base_parser.add_argument("--volume_envelope", type=float, default=1, help="Огибающая громкости")
+    base_parser.add_argument("--autopitch", type=str, default="False", help="Автоматическое определение высоты тона")
+    base_parser.add_argument("--autopitch_threshold", type=float, default=155.0, help="155.0 — Мужская модель | 255.0 — Женская модель")
     base_parser.add_argument("--output_format", type=str, default="mp3", help="Формат выходного файла")
 
     # Главный парсер с субкомандами
@@ -36,8 +38,8 @@ def create_parser():
     tts_parser.add_argument("--tts_voice", type=str, required=True, help="Голос для синтеза речи")
     tts_parser.add_argument("--tts_text", type=str, required=True, help="Текст для синтеза речи")
     tts_parser.add_argument("--tts_rate", type=int, default=0, help="Скорость синтеза речи")
-    tts_parser.add_argument("--tts_volume", type=int, default=0, help="Скорость синтеза речи")
-    tts_parser.add_argument("--tts_pitch", type=int, default=0, help="Скорость синтеза речи")
+    tts_parser.add_argument("--tts_volume", type=int, default=0, help="Громкость синтеза речи")
+    tts_parser.add_argument("--tts_pitch", type=int, default=0, help="Высота тона синтеза речи")
 
     return parser
 
@@ -56,6 +58,8 @@ def main():
         "protect": args.protect,
         "index_rate": args.index_rate,
         "volume_envelope": args.volume_envelope,
+        "autopitch": args.autopitch,
+        "autopitch_threshold": args.autopitch_threshold,
         "output_format": args.output_format,
     }
 
