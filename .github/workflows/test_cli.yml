@@ -52,6 +52,12 @@ jobs:
       run: |
         python3 -m rvc.infer.infer_cli rvc --input_path "audio/test.mp3" --rvc_model "Tsoi" --f0_method "fcpe" --f0_min 1 --f0_max 1100 --hop_length 32 --rvc_pitch -6 --protect 0.5 --index_rate 0 --volume_envelope 1 --output_format "mp3"
 
+    - name: Upload RVC output artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rvc-audio-${{ matrix.python-version }}
+        path: /home/runner/work/PolGen/PolGen/output/RVC_output/*.mp3
+
   tts_cli:
     runs-on: ubuntu-latest
     strategy:
