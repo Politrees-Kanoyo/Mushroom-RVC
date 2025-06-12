@@ -143,6 +143,8 @@ def rvc_infer(
     volume_envelope=1,
     autopitch=False,
     autopitch_threshold=255.0,
+    autotune=False,
+    autotune_strength=1.0,
     output_format="wav",
 ):
     if not rvc_model:
@@ -193,6 +195,8 @@ def rvc_infer(
         hop_length,
         autopitch,
         autopitch_threshold,
+        autotune,
+        autotune_strength,
     )
     # Сохраняем результат в wav файл
     display_progress(0.6, "Сохраняем результат...")
@@ -225,6 +229,8 @@ def rvc_edgetts_infer(
     volume_envelope=1,
     autopitch=False,
     autopitch_threshold=255.0,
+    autotune=False,
+    autotune_strength=1.0,
     output_format="wav",
     # EdgeTTS
     tts_voice=None,
@@ -255,6 +261,8 @@ def rvc_edgetts_infer(
         volume_envelope=volume_envelope,
         autopitch=autopitch,
         autopitch_threshold=autopitch_threshold,
+        autotune=autotune,
+        autotune_strength=autotune_strength,
         output_format=output_format,
     )
 

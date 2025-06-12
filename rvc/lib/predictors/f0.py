@@ -17,6 +17,19 @@ def calc_pitch_shift(f0, target_f0=155.0, limit_f0=12):
     return max(-limit_f0, min(limit_f0, int(np.round(12 * np.log2(target_f0 / median_interp_pitch(f0))))))
 
 
+class AutoTune:
+    def __init__(self, ref_freqs):
+        self.ref_freqs = ref_freqs
+        self.note_dict = self.ref_freqs
+
+    def autotune_f0(self, f0, f0_autotune_strength):
+        autotuned_f0 = np.zeros_like(f0)
+        for i, freq in enumerate(f0):
+            closest_note = min(self.note_dict, key=lambda x: abs(x - freq))
+            autotuned_f0[i] = freq + (closest_note - freq) * f0_autotune_strength
+        return autotuned_f0
+
+
 class RMVPE:
     def __init__(self, device, sample_rate=16000, hop_size=160):
         self.device = device
