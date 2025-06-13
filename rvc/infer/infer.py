@@ -142,7 +142,7 @@ def rvc_infer(
     index_rate=0,
     volume_envelope=1,
     autopitch=False,
-    autopitch_threshold=255.0,
+    autopitch_threshold=155.0,
     autotune=False,
     autotune_strength=1.0,
     output_format="wav",
@@ -165,6 +165,10 @@ def rvc_infer(
     cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
     pitch_guidance = cpt.get("f0", 1)
 
+    # Автоматический выбор пола на основе метаданных модели
+    if autopitch and autopitch_threshold == 0.0:
+        autopitch_threshold = cpt.get("sex", 155.0)
+    
     # Построение имени выходного файла
     base_name = os.path.splitext(os.path.basename(input_path))[0]
     if len(base_name) > 50:
