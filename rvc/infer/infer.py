@@ -80,13 +80,14 @@ def get_vc(model_path):
     # Извлекаем параметры модели
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
-    pitch_guidance = cpt.get("f0", 1)
+
+    use_f0 = cpt.get("f0", 1)
     version = cpt.get("version", "v1")
-    # vocoder = cpt.get("vocoder", "HiFi-GAN") — на будущее
+    vocoder = cpt.get("vocoder", "HiFi-GAN")
     input_dim = 768 if version == "v2" else 256
 
     # Инициализируем синтезатор
-    net_g = Synthesizer(*cpt["config"], use_f0=pitch_guidance, input_dim=input_dim)
+    net_g = Synthesizer(*cpt["config"], use_f0=use_f0, text_enc_hidden_dim=input_dim, vocoder=vocoder)
 
     # Удаляем ненужный слой
     del net_g.enc_q
@@ -96,7 +97,7 @@ def get_vc(model_path):
 
     # Инициализируем объект конвертера голоса
     vc = VC(tgt_sr, config)
-    return cpt, version, net_g, tgt_sr, vc
+    return cpt, version, net_g, tgt_sr, vc, use_f0
 
 
 # Конвертируем файл в стерео и выбранный пользователем формат
@@ -162,8 +163,7 @@ def rvc_infer(
     model_path, index_path = load_rvc_model(rvc_model)
     # Получаем конвертер голоса
     display_progress(0.3, "Получаем конвертер голоса...")
-    cpt, version, net_g, tgt_sr, vc = get_vc(model_path)
-    pitch_guidance = cpt.get("f0", 1)
+    cpt, version, net_g, tgt_sr, vc, use_f0 = get_vc(model_path)
 
     # Автоматический выбор пола на основе метаданных модели
     if autopitch and autopitch_threshold == 0.0:
@@ -192,7 +192,7 @@ def rvc_infer(
         f0_method,
         index_path,
         index_rate,
-        pitch_guidance,
+        use_f0,
         volume_envelope,
         version,
         protect,
