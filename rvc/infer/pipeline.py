@@ -166,15 +166,14 @@ class VC:
         if autopitch:
             pitch += calc_pitch_shift(f0, autopitch_threshold, 12)
 
-        f0 *= pow(2, pitch / 12)
-        f0bak = f0.copy()
+        f0 = np.multiply(f0, pow(2, pitch / 12))
         f0_mel = 1127 * np.log(1 + f0 / 700)
         f0_mel[f0_mel > 0] = (f0_mel[f0_mel > 0] - f0_mel_min) * 254 / (f0_mel_max - f0_mel_min) + 1
         f0_mel[f0_mel <= 1] = 1
         f0_mel[f0_mel > 255] = 255
-        f0_coarse = np.rint(f0_mel).astype(int)
+        f0_mel = np.rint(f0_mel).astype(np.int32)
 
-        return f0_coarse, f0bak
+        return f0_mel, f0
 
     def vc(
         self,
