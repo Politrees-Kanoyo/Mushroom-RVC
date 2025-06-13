@@ -165,10 +165,12 @@ def rvc_infer(
     display_progress(0.3, "Получаем конвертер голоса...")
     cpt, version, net_g, tgt_sr, vc, use_f0 = get_vc(model_path)
 
-    # Автоматический выбор пола на основе метаданных модели
-    if autopitch and autopitch_threshold == 0.0:
-        autopitch_threshold = cpt.get("sex", 155.0)
-    
+    if autopitch:
+        rvc_pitch = 0  # Устанавливаем pitch в 0, чтобы избежать конфликтов
+        # Автоматический выбор пола на основе метаданных модели
+        if autopitch_threshold == 0.0:
+            autopitch_threshold = cpt.get("sex", 155.0)
+
     # Построение имени выходного файла
     base_name = os.path.splitext(os.path.basename(input_path))[0]
     if len(base_name) > 50:
