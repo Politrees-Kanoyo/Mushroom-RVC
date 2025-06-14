@@ -49,15 +49,23 @@ call "%MINICONDA_DIR%\_conda.exe" create --no-shortcuts -y -k --prefix "%ENV_DIR
 if errorlevel 1 goto :error
 echo Conda environment created successfully.
 echo.
+
+if exist "%ENV_DIR%\python.exe" (
+    echo Installing uv package installer...
+    "%ENV_DIR%\python.exe" -m pip install uv
+    if errorlevel 1 goto :error
+    echo uv installation complete.
+    echo.
+)
 exit /b 0
 
 :install_dependencies
 cls
 echo Installing dependencies...
 call "%MINICONDA_DIR%\condabin\conda.bat" activate "%ENV_DIR%" || goto :error
-pip install --upgrade setuptools || goto :error
-pip install -r "%PRINCIPAL%\requirements.txt" || goto :error
-pip install torch==2.6.0 torchaudio==2.6.0 torchvision==0.21.0 --upgrade --index-url https://download.pytorch.org/whl/cu121 || goto :error
+uv pip install --upgrade setuptools || goto :error
+uv pip install -r "%PRINCIPAL%\requirements.txt" || goto :error
+uv pip install torch==2.7.1 torchaudio==2.7.1 torchvision==0.22.1 --upgrade --index-url https://download.pytorch.org/whl/cu128 || goto :error
 call "%MINICONDA_DIR%\condabin\conda.bat" deactivate
 echo Dependencies installation complete.
 echo.

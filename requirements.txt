@@ -16,9 +16,9 @@ torchfcpe
 edge-tts
 
 # Машинное обучение и нейронные сети
-torch==2.6
-torchaudio==2.6
-torchvision==0.21
+torch==2.7.1
+torchaudio==2.7.1
+torchvision==0.22.1
 faiss-cpu==1.7.3
 local-attention
 tensorboardX

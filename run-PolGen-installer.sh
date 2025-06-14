@@ -50,7 +50,7 @@ install_dependencies() {
     conda activate "$ENV_DIR"
     pip install --upgrade setuptools
     pip install -r "$PRINCIPAL/requirements.txt"
-    pip install torch==2.6.0 torchaudio==2.6.0 torchvision==0.21.0 --upgrade --index-url https://download.pytorch.org/whl/cu121
+    pip install torch==2.7.1 torchaudio==2.7.1 torchvision==0.22.1 --upgrade --index-url https://download.pytorch.org/whl/cu128
     conda deactivate
     echo "Dependencies installation complete."
     echo
