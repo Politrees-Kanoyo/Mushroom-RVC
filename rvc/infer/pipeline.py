@@ -10,7 +10,7 @@ import torchcrepe
 from scipy import signal
 from torch import Tensor
 
-from rvc.lib.predictors.f0 import AutoTune, CREPE, FCPE, RMVPE, calc_pitch_shift
+from rvc.lib.predictors.f0 import CREPE, FCPE, RMVPE, AutoTune, calc_pitch_shift
 
 # Фильтр Баттерворта для высоких частот
 bh, ah = signal.butter(N=5, Wn=48, btype="high", fs=16000)
@@ -115,7 +115,6 @@ class VC:
         ]
         self.autotune = AutoTune(self.ref_freqs)
         self.note_dict = self.autotune.note_dict
-
 
     def get_f0(
         self,
