@@ -100,15 +100,10 @@ def get_vc(model_path):
     return cpt, version, net_g, tgt_sr, vc, use_f0
 
 
-# Конвертируем файл в стерео и выбранный пользователем формат
+# Конвертируем файл в выбранный пользователем формат
 def convert_audio(input_audio, output_audio, output_format):
     # Загружаем аудиофайл
     audio = AudioSegment.from_file(input_audio)
-
-    # Если аудио моно, конвертируем его в стерео
-    if audio.channels == 1:
-        audio = audio.set_channels(2)
-
     # Сохраняем аудиофайл в выбранном формате
     audio.export(output_audio, format=output_format)
 
@@ -165,12 +160,6 @@ def rvc_infer(
     display_progress(0.3, "Получаем конвертер голоса...")
     cpt, version, net_g, tgt_sr, vc, use_f0 = get_vc(model_path)
 
-    if autopitch:
-        rvc_pitch = 0  # Устанавливаем pitch в 0, чтобы избежать конфликтов
-        # Автоматический выбор пола на основе метаданных модели
-        if autopitch_threshold == 0.0:
-            autopitch_threshold = cpt.get("sex", 155.0)
-
     # Построение имени выходного файла
     base_name = os.path.splitext(os.path.basename(input_path))[0]
     if len(base_name) > 50:
@@ -188,7 +177,7 @@ def rvc_infer(
         net_g,
         0,
         audio,
-        rvc_pitch,
+        0 if autopitch else rvc_pitch,
         f0_min,
         f0_max,
         f0_method,
@@ -204,12 +193,9 @@ def rvc_infer(
         autotune,
         autotune_strength,
     )
-    # Сохраняем результат в wav файл
-    display_progress(0.6, "Сохраняем результат...")
+    # Сохраняем файл и конвертируем его в выбранный формат
+    print_display_progress(0.8, "[💫] Сохраняем результат...")
     wavfile.write(output_path, tgt_sr, audio_opt)
-
-    # Конвертируем файл в стерео и выбранный пользователем формат
-    print_display_progress(0.8, "[💫] Конвертация аудио в стерео...")
     convert_audio(output_path, output_path, output_format)
 
     # Освобождаем память
@@ -234,7 +220,7 @@ def rvc_edgetts_infer(
     index_rate=0,
     volume_envelope=1,
     autopitch=False,
-    autopitch_threshold=255.0,
+    autopitch_threshold=155.0,
     autotune=False,
     autotune_strength=1.0,
     output_format="wav",
