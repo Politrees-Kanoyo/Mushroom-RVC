@@ -29,12 +29,9 @@ config = Config()
 
 
 # Отображает прогресс выполнения задачи.
-def display_progress(percent, message, progress=gr.Progress()):
-    progress(percent, desc=message)
-
-
-def print_display_progress(percent, message, progress=gr.Progress()):
-    print(message)
+def display_progress(percent, message, is_print, progress=gr.Progress()):
+    if is_print:
+        print(message)
     progress(percent, desc=message)
 
 
@@ -148,16 +145,16 @@ def rvc_infer(
     if not os.path.exists(input_path):
         raise ValueError(f"Не удалось найти файл '{input_path}'. Убедитесь, что он загрузился или проверьте правильность пути к нему.")
 
-    print_display_progress(0, "\n[⚙️] Запуск конвейера генерации...")
+    display_progress(0, "\n[⚙️] Запуск конвейера генерации...", True)
 
     # Загружаем модель Hubert
-    display_progress(0.1, "Загружаем модель Hubert...")
+    display_progress(0.1, "Загружаем модель Hubert...", False)
     hubert_model = load_hubert(HUBERT_BASE_PATH)
     # Загружаем модель RVC и индекс
-    display_progress(0.2, "Загружаем модель RVC и индекс...")
+    display_progress(0.2, "Загружаем модель RVC и индекс...", False)
     model_path, index_path = load_rvc_model(rvc_model)
     # Получаем конвертер голоса
-    display_progress(0.3, "Получаем конвертер голоса...")
+    display_progress(0.3, "Получаем конвертер голоса...", False)
     cpt, version, net_g, tgt_sr, vc, use_f0 = get_vc(model_path)
 
     # Построение имени выходного файла
@@ -168,10 +165,10 @@ def rvc_infer(
     output_path = os.path.join(OUTPUT_DIR, f"{base_name}_({rvc_model}).{output_format}")
 
     # Загружаем аудиофайл
-    display_progress(0.4, "Загружаем аудиофайл...")
+    display_progress(0.4, "Загружаем аудиофайл...", False)
     audio = load_audio(input_path, 16000)
 
-    print_display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...")
+    display_progress(0.5, f"[🌌] Преобразование аудио — {base_name}...", True)
     audio_opt = vc.pipeline(
         hubert_model,
         net_g,
@@ -194,17 +191,17 @@ def rvc_infer(
         autotune_strength,
     )
     # Сохраняем файл и конвертируем его в выбранный формат
-    print_display_progress(0.8, "[💫] Сохраняем результат...")
+    display_progress(0.8, "[💫] Сохраняем результат...", True)
     wavfile.write(output_path, tgt_sr, audio_opt)
     convert_audio(output_path, output_path, output_format)
 
     # Освобождаем память
-    display_progress(0.9, "Освобождаем память...")
+    display_progress(0.9, "Освобождаем память...", False)
     del hubert_model, cpt, net_g, vc
     gc.collect()
     torch.cuda.empty_cache()
 
-    print_display_progress(1.0, f"[✅] Преобразование завершено — {output_path}")
+    display_progress(1.0, f"[✅] Преобразование завершено — {output_path}", True)
     return gr.Audio(output_path, label=os.path.basename(output_path))
 
 
@@ -236,7 +233,7 @@ def rvc_edgetts_infer(
     if not tts_voice:
         raise ValueError("Выберите язык и голос для синтеза речи.")
 
-    display_progress(1.0, "[🎙️] Синтезируем речь...")
+    display_progress(1.0, "[🎙️] Синтезируем речь...", False)
     input_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
     asyncio.run(text_to_speech(tts_voice, tts_text, tts_rate, tts_volume, tts_pitch, input_path))
 
