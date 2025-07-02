@@ -1,4 +1,3 @@
-import gc
 import os
 
 import faiss
@@ -6,9 +5,7 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
-import torchcrepe
 from scipy import signal
-from torch import Tensor
 
 from rvc.lib.predictors.f0 import CREPE, FCPE, RMVPE, AutoTune, calc_pitch_shift
 
