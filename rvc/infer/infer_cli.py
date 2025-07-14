@@ -1,11 +1,20 @@
-from assets.logging_config import configure_logging
+# Установка необходимых файлов, если их нет
 from assets.model_installer import check_and_install_models
-
-configure_logging(True, False, "WARNING")
 check_and_install_models()
 
 import argparse
+import logging
+import os
+import sys
+import warnings
 from distutils.util import strtobool
+
+# Настройка окружения
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+# Настройка логирования и подавление предупреждений
+logging.basicConfig(level=logging.WARNING)
+warnings.filterwarnings("ignore")
 
 from rvc.infer.infer import rvc_edgetts_infer, rvc_infer
 

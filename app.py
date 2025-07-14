@@ -1,13 +1,22 @@
-from assets.logging_config import configure_logging
+# Установка необходимых файлов, если их нет
 from assets.model_installer import check_and_install_models
-
-configure_logging(True, False, "WARNING")
 check_and_install_models()
 
 print("\nЗапуск интерфейса PolGen. Подождите...\n")
 
+import logging
+import os
 import sys
+import warnings
 from typing import Any
+
+# Настройка окружения
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
+
+# Настройка логирования и подавление предупреждений
+logging.basicConfig(level=logging.WARNING)
+warnings.filterwarnings("ignore")
 
 import gradio as gr
 from PolUVR.utils import PolUVR_UI
