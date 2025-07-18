@@ -50,7 +50,8 @@ def load_rvc_model(rvc_model):
     # Проверяем, существует ли файл модели
     if not rvc_model_path:
         raise ValueError(
-            f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
+            f"\033[91mОШИБКА!\033[0m Модель {rvc_model} не обнаружена. "
+            "Возможно, вы допустили ошибку в названии или указали неверную ссылку при установке."
         )
 
     return rvc_model_path, rvc_index_path
@@ -129,7 +130,6 @@ def rvc_infer(
     f0_method="rmvpe",
     f0_min=50,
     f0_max=1100,
-    hop_length=128,
     rvc_pitch=0,
     protect=0.5,
     index_rate=0,
@@ -184,7 +184,6 @@ def rvc_infer(
         volume_envelope,
         version,
         protect,
-        hop_length,
         autopitch,
         autopitch_threshold,
         autotune,
@@ -211,7 +210,6 @@ def rvc_edgetts_infer(
     f0_method="rmvpe",
     f0_min=50,
     f0_max=1100,
-    hop_length=128,
     rvc_pitch=0,
     protect=0.5,
     index_rate=0,
@@ -243,7 +241,6 @@ def rvc_edgetts_infer(
         f0_method=f0_method,
         f0_min=f0_min,
         f0_max=f0_max,
-        hop_length=hop_length,
         rvc_pitch=rvc_pitch,
         protect=protect,
         index_rate=index_rate,

@@ -46,82 +46,25 @@ class VC:
         self.x_max = config.x_max
         self.sample_rate = 16000
         self.window = 160
+        self.tgt_sr = tgt_sr
         self.t_pad = self.sample_rate * self.x_pad
-        self.t_pad_tgt = tgt_sr * self.x_pad
+        self.t_pad_tgt = self.tgt_sr * self.x_pad
         self.t_pad2 = self.t_pad * 2
         self.t_query = self.sample_rate * self.x_query
         self.t_center = self.sample_rate * self.x_center
         self.t_max = self.sample_rate * self.x_max
         self.time_step = self.window / self.sample_rate * 1000
         self.device = config.device
-        self.ref_freqs = [
-            49.00,  # G1
-            51.91,  # G#1 / Ab1
-            55.00,  # A1
-            58.27,  # A#1 / Bb1
-            61.74,  # B1
-            65.41,  # C2
-            69.30,  # C#2 / Db2
-            73.42,  # D2
-            77.78,  # D#2 / Eb2
-            82.41,  # E2
-            87.31,  # F2
-            92.50,  # F#2 / Gb2
-            98.00,  # G2
-            103.83,  # G#2 / Ab2
-            110.00,  # A2
-            116.54,  # A#2 / Bb2
-            123.47,  # B2
-            130.81,  # C3
-            138.59,  # C#3 / Db3
-            146.83,  # D3
-            155.56,  # D#3 / Eb3
-            164.81,  # E3
-            174.61,  # F3
-            185.00,  # F#3 / Gb3
-            196.00,  # G3
-            207.65,  # G#3 / Ab3
-            220.00,  # A3
-            233.08,  # A#3 / Bb3
-            246.94,  # B3
-            261.63,  # C4
-            277.18,  # C#4 / Db4
-            293.66,  # D4
-            311.13,  # D#4 / Eb4
-            329.63,  # E4
-            349.23,  # F4
-            369.99,  # F#4 / Gb4
-            392.00,  # G4
-            415.30,  # G#4 / Ab4
-            440.00,  # A4
-            466.16,  # A#4 / Bb4
-            493.88,  # B4
-            523.25,  # C5
-            554.37,  # C#5 / Db5
-            587.33,  # D5
-            622.25,  # D#5 / Eb5
-            659.25,  # E5
-            698.46,  # F5
-            739.99,  # F#5 / Gb5
-            783.99,  # G5
-            830.61,  # G#5 / Ab5
-            880.00,  # A5
-            932.33,  # A#5 / Bb5
-            987.77,  # B5
-            1046.50,  # C6
-        ]
-        self.autotune = AutoTune(self.ref_freqs)
-        self.note_dict = self.autotune.note_dict
+        self.autotune = AutoTune()
 
     def get_f0(
         self,
-        x,
+        audio,
         p_len,
         pitch,
         f0_min,
         f0_max,
         f0_method,
-        hop_length,
         autopitch,
         autopitch_threshold,
         autotune,
@@ -136,30 +79,30 @@ class VC:
 
         if f0_method == "crepe":
             model = CREPE(device=self.device, sample_rate=self.sample_rate, hop_size=self.window)
-            f0 = model.get_f0(x, f0_min, f0_max, p_len, "full")
+            f0 = model.get_f0(audio, f0_min, f0_max, p_len, "full")
             del model
         elif f0_method == "crepe-tiny":
             model = CREPE(device=self.device, sample_rate=self.sample_rate, hop_size=self.window)
-            f0 = model.get_f0(x, f0_min, f0_max, p_len, "tiny")
-            del model
-        elif f0_method == "rmvpe":
-            model = RMVPE(device=self.device, sample_rate=self.sample_rate, hop_size=self.window)
-            f0 = model.get_f0(x, filter_radius=0.03)
+            f0 = model.get_f0(audio, f0_min, f0_max, p_len, "tiny")
             del model
         elif f0_method == "fcpe":
             model = FCPE(device=self.device, sample_rate=self.sample_rate, hop_size=self.window)
-            f0 = model.get_f0(x, p_len, filter_radius=0.006)
+            f0 = model.get_f0(audio, p_len)
+            del model
+        elif f0_method in ("rmvpe", "rmvpe+"):
+            model = RMVPE(device=self.device, sample_rate=self.sample_rate)
+            f0 = model.get_f0(audio, f0_method)
             del model
 
         if f0 is None:
             raise ValueError("Метод F0 не распознан или не смог рассчитать F0.")
 
         # АвтоТюн (коррекция высоты тона)
-        if autotune:
-            f0 = AutoTune.autotune_f0(self, f0, autotune_strength)
+        if autotune is True:
+            f0 = self.autotune.autotune_f0(f0, autotune_strength)
 
         # АвтоПитч (автоматическое определение высоты тона)
-        if autopitch:
+        if autopitch is True:
             pitch += calc_pitch_shift(f0, autopitch_threshold, 12)
 
         f0 = np.multiply(f0, pow(2, pitch / 12))
@@ -265,7 +208,6 @@ class VC:
         volume_envelope,
         version,
         protect,
-        hop_length,
         autopitch,
         autopitch_threshold,
         autotune,
@@ -313,7 +255,6 @@ class VC:
                 f0_min,
                 f0_max,
                 f0_method,
-                hop_length,
                 autopitch,
                 autopitch_threshold,
                 autotune,
@@ -373,7 +314,7 @@ class VC:
 
         audio_opt = np.concatenate(audio_opt)
         if volume_envelope != 1:
-            audio_opt = AudioProcessor.change_rms(audio, self.sample_rate, audio_opt, self.sample_rate, volume_envelope)
+            audio_opt = AudioProcessor.change_rms(audio, self.sample_rate, audio_opt, self.tgt_sr, volume_envelope)
 
         audio_max = np.abs(audio_opt).max() / 0.99
         if audio_max > 1:
