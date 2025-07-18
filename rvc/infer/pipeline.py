@@ -55,7 +55,7 @@ class VC:
         self.t_max = self.sample_rate * self.x_max
         self.time_step = self.window / self.sample_rate * 1000
         self.device = config.device
-        self.autotune = Autotune()
+        self.autotune = AutoTune()
 
     def get_f0(
         self,
