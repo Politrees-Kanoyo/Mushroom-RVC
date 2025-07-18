@@ -99,7 +99,7 @@ class VC:
 
         # АвтоТюн (коррекция высоты тона)
         if autotune is True:
-            f0 = AutoTune.autotune_f0(self, f0, autotune_strength)
+            f0 = self.autotune.autotune_f0(f0, autotune_strength)
 
         # АвтоПитч (автоматическое определение высоты тона)
         if autopitch is True:
