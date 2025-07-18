@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from librosa.filters import mel
+from scipy.signal import medfilt
 
 N_MELS = 128
 N_CLASS = 360
@@ -305,7 +306,7 @@ class MelSpectrogram(torch.nn.Module):
         return log_mel_spec
 
 
-class RMVPE0Predictor:
+class RMVPEF0Predictor:
     def __init__(self, model_path, device=None):
         self.resample_kernel = {}
         model = E2E(4, 1, (2, 2))
@@ -320,12 +321,20 @@ class RMVPE0Predictor:
         cents_mapping = 20 * np.arange(N_CLASS) + 1997.3794084376191
         self.cents_mapping = np.pad(cents_mapping, (4, 4))
 
-    def mel2hidden(self, input_mel):
+    def mel2hidden(self, input_mel, chunk_size=32000):
         with torch.no_grad():
             n_frames = input_mel.shape[-1]
             padded_mel = F.pad(input_mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
-            hidden = self.model(padded_mel)
-            return hidden[:, :n_frames]
+            output_chunks = []
+            pad_frames = padded_mel.shape[-1]
+            for start in range(0, pad_frames, chunk_size):
+                end = min(start + chunk_size, pad_frames)
+                mel_chunk = padded_mel[..., start:end]
+                assert mel_chunk.shape[-1] % 32 == 0, "chunk_size must be divisible by 32"
+                out_chunk = self.model(mel_chunk)
+                output_chunks.append(out_chunk)
+            hidden = torch.cat(output_chunks, dim=1)
+        return hidden[:, :n_frames]
 
     def decode(self, hidden, thred=0.03):
         cents_pred = self.to_local_average_cents(hidden, thred=thred)
@@ -336,10 +345,26 @@ class RMVPE0Predictor:
     def infer_from_audio(self, audio, thred=0.03):
         audio = torch.from_numpy(audio).float().to(self.device).unsqueeze(0)
         extracted_mel = self.mel_extractor(audio, center=True)
+        del audio
+        with torch.no_grad():
+            torch.cuda.empty_cache()
         hidden = self.mel2hidden(extracted_mel)
         hidden = hidden.squeeze(0).cpu().numpy()
         f0 = self.decode(hidden, thred=thred)
         return f0
+
+    def infer_from_audio_modified(self, audio, thred=0.02, f0_min=50, f0_max=1100, window_size=5):
+        audio = torch.from_numpy(audio).float().to(self.device).unsqueeze(0)
+        extracted_mel = self.mel_extractor(audio, center=True)
+        del audio
+        with torch.no_grad():
+            torch.cuda.empty_cache()
+        hidden = self.mel2hidden(extracted_mel)
+        hidden = hidden.squeeze(0).cpu().numpy()
+        f0 = self.decode(hidden, thred=thred)
+        f0[(f0 < f0_min) | (f0 > f0_max)] = 0
+        smoothed_f0 = medfilt(f0, kernel_size=window_size)
+        return smoothed_f0
 
     def to_local_average_cents(self, salience, thred=0.05):
         center = np.argmax(salience, axis=1)
