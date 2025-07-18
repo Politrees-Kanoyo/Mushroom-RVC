@@ -66,12 +66,6 @@ def process_file_upload(file):
     return file, gr.update(value=file)
 
 
-def show_hop_slider(pitch_detection_algo):
-    if pitch_detection_algo in ["crepe", "crepe-tiny"]:
-        return gr.update(visible=True)
-    return gr.update(visible=False)
-
-
 def swap_visibility():
     return (
         gr.update(visible=True),

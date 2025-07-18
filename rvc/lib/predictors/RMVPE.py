@@ -2,8 +2,6 @@ from typing import List
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from librosa.filters import mel
 from scipy.signal import medfilt
 
@@ -11,10 +9,10 @@ N_MELS = 128
 N_CLASS = 360
 
 
-class BiGRU(nn.Module):
+class BiGRU(torch.nn.Module):
     def __init__(self, input_features, hidden_features, num_layers):
         super().__init__()
-        self.gru = nn.GRU(
+        self.gru = torch.nn.GRU(
             input_features,
             hidden_features,
             num_layers=num_layers,
@@ -26,11 +24,11 @@ class BiGRU(nn.Module):
         return self.gru(x)[0]
 
 
-class ConvBlockRes(nn.Module):
+class ConvBlockRes(torch.nn.Module):
     def __init__(self, in_channels, out_channels, momentum=0.01):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(
+        self.conv = torch.nn.Sequential(
+            torch.nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=(3, 3),
@@ -38,9 +36,9 @@ class ConvBlockRes(nn.Module):
                 padding=(1, 1),
                 bias=False,
             ),
-            nn.BatchNorm2d(out_channels, momentum=momentum),
-            nn.ReLU(),
-            nn.Conv2d(
+            torch.nn.BatchNorm2d(out_channels, momentum=momentum),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(
                 in_channels=out_channels,
                 out_channels=out_channels,
                 kernel_size=(3, 3),
@@ -48,11 +46,11 @@ class ConvBlockRes(nn.Module):
                 padding=(1, 1),
                 bias=False,
             ),
-            nn.BatchNorm2d(out_channels, momentum=momentum),
-            nn.ReLU(),
+            torch.nn.BatchNorm2d(out_channels, momentum=momentum),
+            torch.nn.ReLU(),
         )
         if in_channels != out_channels:
-            self.shortcut = nn.Conv2d(in_channels, out_channels, (1, 1))
+            self.shortcut = torch.nn.Conv2d(in_channels, out_channels, (1, 1))
             self.is_shortcut = True
         else:
             self.is_shortcut = False
@@ -63,17 +61,17 @@ class ConvBlockRes(nn.Module):
         return self.conv(x) + x
 
 
-class ResEncoderBlock(nn.Module):
+class ResEncoderBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, n_blocks=1, momentum=0.01):
         super().__init__()
         self.n_blocks = n_blocks
-        self.conv = nn.ModuleList()
+        self.conv = torch.nn.ModuleList()
         self.conv.append(ConvBlockRes(in_channels, out_channels, momentum))
         for _ in range(n_blocks - 1):
             self.conv.append(ConvBlockRes(out_channels, out_channels, momentum))
         self.kernel_size = kernel_size
         if self.kernel_size is not None:
-            self.pool = nn.AvgPool2d(kernel_size=kernel_size)
+            self.pool = torch.nn.AvgPool2d(kernel_size=kernel_size)
 
     def forward(self, x):
         for i in range(self.n_blocks):
@@ -83,7 +81,7 @@ class ResEncoderBlock(nn.Module):
         return x
 
 
-class Encoder(nn.Module):
+class Encoder(torch.nn.Module):
     def __init__(
         self,
         in_channels,
@@ -96,8 +94,8 @@ class Encoder(nn.Module):
     ):
         super().__init__()
         self.n_encoders = n_encoders
-        self.bn = nn.BatchNorm2d(in_channels, momentum=momentum)
-        self.layers = nn.ModuleList()
+        self.bn = torch.nn.BatchNorm2d(in_channels, momentum=momentum)
+        self.layers = torch.nn.ModuleList()
         self.latent_channels = []
         for _ in range(self.n_encoders):
             self.layers.append(ResEncoderBlock(in_channels, out_channels, kernel_size, n_blocks, momentum=momentum))
@@ -117,11 +115,11 @@ class Encoder(nn.Module):
         return x, concat_tensors
 
 
-class Intermediate(nn.Module):
+class Intermediate(torch.nn.Module):
     def __init__(self, in_channels, out_channels, n_inters, n_blocks, momentum=0.01):
         super().__init__()
         self.n_inters = n_inters
-        self.layers = nn.ModuleList()
+        self.layers = torch.nn.ModuleList()
         self.layers.append(ResEncoderBlock(in_channels, out_channels, None, n_blocks, momentum))
         for _ in range(self.n_inters - 1):
             self.layers.append(ResEncoderBlock(out_channels, out_channels, None, n_blocks, momentum))
@@ -132,13 +130,13 @@ class Intermediate(nn.Module):
         return x
 
 
-class ResDecoderBlock(nn.Module):
+class ResDecoderBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, stride, n_blocks=1, momentum=0.01):
         super().__init__()
         out_padding = (0, 1) if stride == (1, 2) else (1, 1)
         self.n_blocks = n_blocks
-        self.conv1 = nn.Sequential(
-            nn.ConvTranspose2d(
+        self.conv1 = torch.nn.Sequential(
+            torch.nn.ConvTranspose2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=(3, 3),
@@ -147,10 +145,10 @@ class ResDecoderBlock(nn.Module):
                 output_padding=out_padding,
                 bias=False,
             ),
-            nn.BatchNorm2d(out_channels, momentum=momentum),
-            nn.ReLU(),
+            torch.nn.BatchNorm2d(out_channels, momentum=momentum),
+            torch.nn.ReLU(),
         )
-        self.conv2 = nn.ModuleList()
+        self.conv2 = torch.nn.ModuleList()
         self.conv2.append(ConvBlockRes(out_channels * 2, out_channels, momentum))
         for _ in range(n_blocks - 1):
             self.conv2.append(ConvBlockRes(out_channels, out_channels, momentum))
@@ -163,10 +161,10 @@ class ResDecoderBlock(nn.Module):
         return x
 
 
-class Decoder(nn.Module):
+class Decoder(torch.nn.Module):
     def __init__(self, in_channels, n_decoders, stride, n_blocks, momentum=0.01):
         super().__init__()
-        self.layers = nn.ModuleList()
+        self.layers = torch.nn.ModuleList()
         self.n_decoders = n_decoders
         for _ in range(self.n_decoders):
             out_channels = in_channels // 2
@@ -179,7 +177,7 @@ class Decoder(nn.Module):
         return x
 
 
-class DeepUnet(nn.Module):
+class DeepUnet(torch.nn.Module):
     def __init__(
         self,
         kernel_size,
@@ -206,7 +204,7 @@ class DeepUnet(nn.Module):
         return x
 
 
-class E2E(nn.Module):
+class E2E(torch.nn.Module):
     def __init__(
         self,
         n_blocks,
@@ -226,16 +224,16 @@ class E2E(nn.Module):
             in_channels,
             en_out_channels,
         )
-        self.cnn = nn.Conv2d(en_out_channels, 3, (3, 3), padding=(1, 1))
+        self.cnn = torch.nn.Conv2d(en_out_channels, 3, (3, 3), padding=(1, 1))
         if n_gru:
-            self.fc = nn.Sequential(
+            self.fc = torch.nn.Sequential(
                 BiGRU(3 * 128, 256, n_gru),
-                nn.Linear(512, N_CLASS),
-                nn.Dropout(0.25),
-                nn.Sigmoid(),
+                torch.nn.Linear(512, N_CLASS),
+                torch.nn.Dropout(0.25),
+                torch.nn.Sigmoid(),
             )
         else:
-            self.fc = nn.Sequential(nn.Linear(3 * N_MELS, N_CLASS), nn.Dropout(0.25), nn.Sigmoid())
+            self.fc = torch.nn.Sequential(torch.nn.Linear(3 * N_MELS, N_CLASS), torch.nn.Dropout(0.25), torch.nn.Sigmoid())
 
     def forward(self, mel):
         mel = mel.transpose(-1, -2).unsqueeze(1)
@@ -299,7 +297,7 @@ class MelSpectrogram(torch.nn.Module):
             size = self.n_fft // 2 + 1
             resize = magnitude.size(1)
             if resize < size:
-                magnitude = F.pad(magnitude, (0, 0, 0, size - resize))
+                magnitude = torch.nn.functional.pad(magnitude, (0, 0, 0, size - resize))
             magnitude = magnitude[:, :size, :] * self.win_length / win_length_new
         mel_output = torch.matmul(self.mel_basis, magnitude)
         log_mel_spec = torch.log(torch.clamp(mel_output, min=self.clamp))
@@ -324,7 +322,7 @@ class RMVPEF0Predictor:
     def mel2hidden(self, input_mel, chunk_size=32000):
         with torch.no_grad():
             n_frames = input_mel.shape[-1]
-            padded_mel = F.pad(input_mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
+            padded_mel = torch.nn.functional.pad(input_mel, (0, 32 * ((n_frames - 1) // 32 + 1) - n_frames), mode="reflect")
             output_chunks = []
             pad_frames = padded_mel.shape[-1]
             for start in range(0, pad_frames, chunk_size):

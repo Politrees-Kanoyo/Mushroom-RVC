@@ -7,7 +7,6 @@ from tabs.components.modules import (
     get_folders,
     process_file_upload,
     show_autotune,
-    show_hop_slider,
     swap_buttons,
     swap_visibility,
     update_edge_voices,
@@ -133,7 +132,7 @@ def inference_tab():
                 )
 
     # Компонент настроек
-    f0_method, hop_length, index_rate, volume_envelope, protect, f0_min, f0_max = settings()
+    f0_method, index_rate, volume_envelope, protect, f0_min, f0_max = settings()
 
     # Загрузка файлов
     local_file.input(process_file_upload, inputs=[local_file], outputs=[song_input, local_file])
@@ -143,9 +142,6 @@ def inference_tab():
     show_enter_button.click(swap_visibility, outputs=[enter_local_file, upload_file, song_input, local_file])
     show_upload_button.click(swap_buttons, outputs=[show_upload_button, show_enter_button])
     show_enter_button.click(swap_buttons, outputs=[show_enter_button, show_upload_button])
-
-    # Показать hop_length
-    f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)
 
     # Показать autotune_strength
     autotune.change(show_autotune, inputs=autotune, outputs=autotune_strength)
@@ -165,7 +161,6 @@ def inference_tab():
             f0_method,
             f0_min,
             f0_max,
-            hop_length,
             rvc_pitch,
             protect,
             index_rate,
@@ -319,13 +314,10 @@ def edge_tts_tab():
                 )
 
     # Компонент настроек
-    f0_method, hop_length, index_rate, volume_envelope, protect, f0_min, f0_max = settings()
+    f0_method, index_rate, volume_envelope, protect, f0_min, f0_max = settings()
 
     # Обновление списка TTS-голосов
     language.change(update_edge_voices, inputs=language, outputs=tts_voice)
-
-    # Показать hop_length
-    f0_method.change(show_hop_slider, inputs=f0_method, outputs=hop_length)
 
     # Обновление метода регулировки высоты тона
     autopitch.change(update_visible, inputs=autopitch, outputs=[autopitch_threshold, rvc_pitch])
@@ -344,7 +336,6 @@ def edge_tts_tab():
             f0_method,
             f0_min,
             f0_max,
-            hop_length,
             rvc_pitch,
             protect,
             index_rate,

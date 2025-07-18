@@ -10,19 +10,9 @@ def settings():
                         f0_method = gr.Dropdown(
                             value="rmvpe",
                             label="Метод выделения тона",
-                            choices=["rmvpe", "fcpe", "crepe", "crepe-tiny"],
+                            choices=["rmvpe+", "rmvpe", "fcpe", "crepe", "crepe-tiny"],
                             interactive=True,
                             visible=True,
-                        )
-                        hop_length = gr.Slider(
-                            minimum=8,
-                            maximum=512,
-                            step=8,
-                            value=128,
-                            label="Длина шага",
-                            info="Меньшие значения приводят к более длительным преобразованиям, что увеличивает риск появления артефактов в голосе, однако при этом достигается более точная передача тона.",
-                            interactive=True,
-                            visible=False,
                         )
                         index_rate = gr.Slider(
                             minimum=0,
@@ -79,4 +69,4 @@ def settings():
                             visible=True,
                         )
 
-    return f0_method, hop_length, index_rate, volume_envelope, protect, f0_min, f0_max
+    return f0_method, index_rate, volume_envelope, protect, f0_min, f0_max

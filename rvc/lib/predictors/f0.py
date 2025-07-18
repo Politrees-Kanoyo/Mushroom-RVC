@@ -17,7 +17,7 @@ def calc_pitch_shift(f0, target_f0=155.0, limit_f0=12):
     return max(-limit_f0, min(limit_f0, int(np.round(12 * np.log2(target_f0 / median_interp_pitch(f0))))))
 
 
-class Autotune:
+class AutoTune:
     def __init__(self):
         self.note_dict = [
             49.00,  # G1

@@ -26,7 +26,6 @@ def create_parser():
     base.add_argument("--f0_method", type=str, default="rmvpe", help="Метод извлечения F0")
     base.add_argument("--f0_min", type=int, default=50, help="Минимальная частота F0")
     base.add_argument("--f0_max", type=int, default=1100, help="Максимальная частота F0")
-    base.add_argument("--hop_length", type=int, default=128, help="Длина шага для обработки Crepe")
     base.add_argument("--rvc_pitch", type=float, default=0, help="Высота тона RVC модели")
     base.add_argument("--protect", type=float, default=0.5, help="Защита согласных")
     base.add_argument("--index_rate", type=float, default=0, help="Коэффициент индекса")
@@ -65,7 +64,6 @@ def main():
         "f0_method": args.f0_method,
         "f0_min": args.f0_min,
         "f0_max": args.f0_max,
-        "hop_length": args.hop_length,
         "rvc_pitch": args.rvc_pitch,
         "protect": args.protect,
         "index_rate": args.index_rate,
