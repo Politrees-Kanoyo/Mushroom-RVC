@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from scipy import signal
+from tqdm import tqdm
 
 from rvc.lib.predictors.f0 import CREPE, FCPE, RMVPE, AutoTune, calc_pitch_shift
 
@@ -269,7 +270,7 @@ class VC:
             pitch_tensor = torch.tensor(pitch, device=self.device).unsqueeze(0).long()
             pitchf_tensor = torch.tensor(pitchf, device=self.device).unsqueeze(0).float()
 
-        for t in opt_ts:
+        for t in tqdm(opt_ts, desc="Конвертация"):
             t = t // self.window * self.window
 
             audio_segment = audio_pad[s : t + self.t_pad2 + self.window]

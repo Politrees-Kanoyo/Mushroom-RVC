@@ -139,6 +139,7 @@ def rvc_infer(
     autotune=False,
     autotune_strength=1.0,
     output_format="wav",
+    progress=gr.Progress(track_tqdm=True),
 ):
     if not rvc_model:
         raise ValueError("Выберите модель голоса для преобразования.")
@@ -225,6 +226,7 @@ def rvc_edgetts_infer(
     tts_rate=0,
     tts_volume=0,
     tts_pitch=0,
+    progress=gr.Progress(track_tqdm=True),
 ):
     if not tts_text:
         raise ValueError("Введите необходимый текст в поле для ввода.")
