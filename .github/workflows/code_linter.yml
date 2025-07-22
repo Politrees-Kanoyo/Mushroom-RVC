@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '**/*.py'
+      - '**/*.txt'
       - '.github/workflows/code_linter.yml'
 
 jobs:

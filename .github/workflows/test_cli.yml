@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - '**/*.py'
+      - '**/*.txt'
       - '.github/workflows/test_cli.yml'
   pull_request:
     paths:
       - '**/*.py'
+      - '**/*.txt'
       - '.github/workflows/test_cli.yml'
 
 jobs:
