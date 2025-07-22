@@ -3,7 +3,7 @@ name: Code Formatter
 on:
   push:
     branches:
-      - PolGen
+      - main
 
 jobs:
   push_format:
@@ -62,4 +62,4 @@ jobs:
           body: "Automatic code formatting"
           title: "Automatic code formatting"
           commit-message: "Automatic code formatting"
-          branch: formatter/PolGen
+          branch: formatter/main
