@@ -1,11 +1,13 @@
 # Основные библиотеки
-requests
-Flask==2.3.3
-Werkzeug==2.3.7
-numpy<2
+matplotlib-inline==0.1.7
+matplotlib==3.10.1
 MarkupSafe==2.1.3
+Werkzeug==2.3.7
 Jinja2==3.1.2
 click==8.1.7
+Flask==2.3.3
+requests
+numpy<2
 gradio
 einops
 mega-x
@@ -14,7 +16,9 @@ wget
 tqdm
 
 # Библиотеки для работы с аудио и видео
-ffmpeg-python>=0.2.0
+ffmpeg-python==0.2.0
+librosa==0.11.0
+pydub==0.25.1
 PolUVR[gpu]
 torchcrepe
 torchfcpe
@@ -27,6 +31,7 @@ torchvision==0.22.1
 faiss-cpu==1.7.3
 local-attention
 tensorboardX
+tensorboard
 
 # Условные зависимости
 fairseq; python_version < '3.11'
