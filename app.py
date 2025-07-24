@@ -2,7 +2,7 @@
 from assets.model_installer import check_and_install_models
 check_and_install_models()
 
-print("\nЗапуск интерфейса PolGen. Подождите...\n")
+print("\nЗапуск интерфейса Mushroom RVC. Подождите...\n")
 
 import logging
 import os
@@ -37,7 +37,7 @@ def is_offline_mode() -> bool:
 
 
 with gr.Blocks(
-    title="PolGen - Politrees" if not is_offline_mode() else "PolGen (offline) - Politrees",
+    title="Mushroom RVC - Politrees" if not is_offline_mode() else "Mushroom RVC (offline) - Politrees",
     css="footer{display:none !important}",
     theme=gr.themes.Soft(
         primary_hue="green",
@@ -46,7 +46,7 @@ with gr.Blocks(
         spacing_size="sm",
         radius_size="lg",
     ),
-) as PolGen:
+) as app:
 
     with gr.Tab("Велком/Контакты"):
         welcome_tab()
@@ -83,7 +83,7 @@ with gr.Blocks(
 
 
 def launch_gradio(server_name: str, server_port: int) -> None:
-    PolGen.launch(
+    app.launch(
         favicon_path="assets/logo.ico",
         share="--share" in sys.argv,
         inbrowser="--open" in sys.argv,

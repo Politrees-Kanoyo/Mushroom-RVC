@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-title PolGen
+title Mushroom RVC
 cd /d "%~dp0"
 
 if not exist env\python.exe (
     echo Error: Virtual environment not found or incomplete.
-    echo Please run 'run-PolGen-installer.bat' first to set up the environment.
+    echo Please run 'run-Mushroom-RVC-installer.bat' first to set up the environment.
     pause
     exit /b 1
 )

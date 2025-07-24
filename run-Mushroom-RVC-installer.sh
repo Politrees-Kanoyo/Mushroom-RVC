@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Welcome to the PolGen Installer!"
+echo "Welcome to the Mushroom RVC Installer!"
 echo
 
 PRINCIPAL=$(pwd)
@@ -102,6 +102,6 @@ create_conda_env
 install_dependencies
 install_ffmpeg
 
-echo "PolGen has been installed successfully!"
-echo "To start PolGen, please run './PolGen.sh'."
+echo "Mushroom RVC has been installed successfully!"
+echo "To start Mushroom RVC, please run './Mushroom-RVC.sh'."
 echo

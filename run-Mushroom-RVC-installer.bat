@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title PolGen Installer
+title Mushroom RVC Installer
 cd /d "%~dp0"
 
-echo Welcome to the PolGen Installer!
+echo Welcome to the Mushroom RVC Installer!
 echo.
 
 set "PRINCIPAL=%cd%"
@@ -18,8 +18,8 @@ call :install_dependencies
 call :download_ffmpeg
 
 cls
-echo PolGen has been installed successfully!
-echo To start PolGen, please run 'run-PolGen.bat'.
+echo Mushroom RVC has been installed successfully!
+echo To start Mushroom RVC, please run 'run-Mushroom-RVC.bat'.
 echo.
 pause
 exit /b 0

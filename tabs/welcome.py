@@ -6,7 +6,7 @@ def welcome_tab():
         """
     <center>
         <h1 style="font-size: 3em;">
-            <b>Добро пожаловать в PolGen</b>
+            <b>Добро пожаловать в Mushroom RVC</b>
         </h1>
     </center>
     """
@@ -47,7 +47,7 @@ def welcome_tab():
         )
         gr.HTML(
             "<center><h2>"
-            "<a href='https://github.com/Bebra777228/PolGen-RVC'>"  # Ссылка
+            "<a href='https://github.com/Bebra777228/Mushroom-RVC'>"  # Ссылка
             "GitHub"  # Имя ссылки
             "</a></h2></center>"
         )
