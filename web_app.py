@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Минималистичный веб-интерфейс для Mushroom RVC API
-Простой и адаптивный интерфейс для личного использования
-"""
+from assets.model_installer import check_and_install_models
+check_and_install_models()
 
 import os
 import sys
@@ -11,7 +9,7 @@ import asyncio
 import argparse
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
-from api import (
+from web.api import (
     MushroomRVCAPI,
     voice_conversion,
     text_to_speech_conversion,
@@ -36,7 +34,7 @@ if '--lang' in sys.argv:
             CURRENT_LANGUAGE = lang
 
 # Создание Flask приложения
-app = Flask(__name__)
+app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
 app.config['SECRET_KEY'] = 'mushroom-rvc-web-ui'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB максимум
 
@@ -439,14 +437,6 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help='Режим отладки')
     
     args = parser.parse_args()
-    
-    # Создание папки для шаблонов если не существует
-    if not os.path.exists('templates'):
-        os.makedirs('templates')
-    
-    # Создание папки для статических файлов если не существует
-    if not os.path.exists('static'):
-        os.makedirs('static')
     
     if args.lang == 'ru':
         print("🍄 Mushroom RVC Web UI запущен!")

@@ -5,6 +5,8 @@ let currentF0Methods = [];
 let currentHubertModels = [];
 let i18n = window.i18n || {};
 let currentLang = window.currentLang || 'ru';
+// Глобальная переменная для отслеживания текущего аудиоплеера
+let currentAudioPlayer = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -348,14 +350,33 @@ async function handleVoiceConversion(event) {
         return;
     }
     
-    formData.set('autopitch', document.getElementById('autopitch').checked.toString());
-    formData.set('autotune', document.getElementById('autotune').checked.toString());
-    
-    if (document.getElementById('autopitch').checked) {
-        formData.set('autopitch_threshold', document.getElementById('autopitch-threshold').value);
+    // Останавливаем предыдущее аудио
+    if (currentAudioPlayer) {
+        currentAudioPlayer.destroy();
+        currentAudioPlayer = null;
     }
-    if (document.getElementById('autotune').checked) {
+    
+    // Исправляем передачу параметров автопитча и автотюна
+    const autopitchChecked = document.getElementById('autopitch').checked;
+    const autotuneChecked = document.getElementById('autotune').checked;
+    
+    // Передаем булевы значения как строки для корректной обработки на сервере
+    formData.set('autopitch', autopitchChecked ? 'true' : 'false');
+    formData.set('autotune', autotuneChecked ? 'true' : 'false');
+    
+    // Передаем пороговые значения
+    if (autopitchChecked) {
+        formData.set('autopitch_threshold', document.getElementById('autopitch-threshold').value);
+    } else {
+        // Когда автопитч отключен, передаем значение по умолчанию
+        formData.set('autopitch_threshold', '155.0');
+    }
+    
+    if (autotuneChecked) {
         formData.set('autotune_strength', document.getElementById('autotune-strength').value);
+    } else {
+        // Когда автотюн отключен, передаем значение по умолчанию
+        formData.set('autotune_strength', '1.0');
     }
     
     showLoading();
@@ -390,6 +411,12 @@ async function handleVoiceConversion(event) {
 
 async function handleTTSConversion(event) {
     event.preventDefault();
+    
+    // Останавливаем предыдущее аудио
+    if (currentAudioPlayer) {
+        currentAudioPlayer.destroy();
+        currentAudioPlayer = null;
+    }
     
     const formData = new FormData(event.target);
     const requestData = {};
@@ -563,29 +590,44 @@ function showResult(result) {
     if (result.type === 'voice-conversion') {
         const titleText = currentLang === 'ru' ? 'Преобразование голоса завершено' : 'Voice conversion completed';
         const fileText = currentLang === 'ru' ? 'Выходной файл:' : 'Output file:';
-        const downloadText = currentLang === 'ru' ? '📥 Скачать результат' : '📥 Download Result';
         
         html = `
             <h4>${titleText}</h4>
             <p><strong>${fileText}</strong> ${result.outputPath}</p>
-            <a href="${result.downloadUrl}" class="btn btn-primary" download>${downloadText}</a>
+            <div class="audio-player-container" id="audio-player-container"></div>
         `;
     } else if (result.type === 'tts-conversion') {
         const titleText = currentLang === 'ru' ? 'Синтез и преобразование завершены' : 'Synthesis and conversion completed';
         const synthText = currentLang === 'ru' ? 'Синтезированная речь:' : 'Synthesized speech:';
         const convertedText = currentLang === 'ru' ? 'Преобразованный голос:' : 'Converted voice:';
-        const downloadText = currentLang === 'ru' ? '📥 Скачать результат' : '📥 Download Result';
         
         html = `
             <h4>${titleText}</h4>
             <p><strong>${synthText}</strong> ${result.synthPath}</p>
             <p><strong>${convertedText}</strong> ${result.convertedPath}</p>
-            <a href="${result.downloadUrl}" class="btn btn-primary" download>${downloadText}</a>
+            <div class="audio-player-container" id="audio-player-container"></div>
         `;
     }
     
     resultContent.innerHTML = html;
     resultArea.classList.remove('hidden');
+    
+    // Останавливаем и уничтожаем предыдущий плеер, если он существует
+    if (currentAudioPlayer) {
+        currentAudioPlayer.destroy();
+        currentAudioPlayer = null;
+    }
+    
+    // Инициализируем новый аудиоплеер после добавления HTML в DOM
+    if (result.downloadUrl) {
+        setTimeout(() => {
+            const playerContainer = document.getElementById('audio-player-container');
+            if (playerContainer) {
+                currentAudioPlayer = new AudioPlayer(playerContainer);
+                currentAudioPlayer.loadAudio(result.downloadUrl, result.outputPath || 'result.mp3');
+            }
+        }, 100);
+    }
     
     resultArea.scrollIntoView({ behavior: 'smooth' });
 }

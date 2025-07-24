@@ -39,7 +39,7 @@ def dl_model(link, model_name, dir_name):
 
 def check_and_install_models():
     try:
-        predictors_names = ["rmvpe.pt", "fcpe.pt"]
+        predictors_names = ["rmvpe.pt"]
         for model in predictors_names:
             dl_model(PREDICTORS, model, PREDICTORS_DIR)
 
@@ -51,3 +51,7 @@ def check_and_install_models():
         print(f"Произошла ошибка при загрузке модели: {e}")
     except Exception as e:
         print(f"Произошла непредвиденная ошибка: {e}")
+
+
+if __name__ == "__main__":
+    check_and_install_models()

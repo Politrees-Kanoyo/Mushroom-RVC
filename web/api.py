@@ -26,12 +26,12 @@ from rvc.modules.model_manager import (
     upload_separate_files as _upload_separate_files
 )
 
-from tabs.install import (
+from web.gradio.install import (
     download_and_replace_model as _download_hubert_model,
     MODELS as HUBERT_MODELS
 )
 
-from tabs.components.modules import (
+from web.gradio.components.modules import (
     get_folders,
     edge_voices,
     OUTPUT_FORMAT
