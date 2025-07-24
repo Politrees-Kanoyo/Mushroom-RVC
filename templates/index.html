@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ i18n.title }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Заголовок -->
+        <header class="header">
+            <h1 class="title">🍄 {{ i18n.title }}</h1>
+            <p class="subtitle">{{ 'Минималистичный интерфейс для преобразования голоса' if lang == 'ru' else 'Minimalist interface for voice conversion' }}</p>
+            <div class="language-switcher">
+                <button class="lang-btn" data-lang="ru" title="Русский">🇷🇺</button>
+                <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+            </div>
+        </header>
+
+        <!-- Навигация -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="voice-conversion">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                {{ i18n.voice_conversion }}
+            </button>
+            <button class="nav-btn" data-tab="tts-conversion">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5,6 9,2 9,2 15,6 15,11 19,11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+                {{ i18n.text_to_speech }}
+            </button>
+            <button class="nav-btn" data-tab="model-management">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12.89 1.45l8 4A2 2 0 0 1 22 7.24v9.53a2 2 0 0 1-1.11 1.79l-8 4a2 2 0 0 1-1.78 0l-8-4a2 2 0 0 1-1.11-1.79V7.24a2 2 0 0 1 1.11-1.79l8-4a2 2 0 0 1 1.78 0z"/>
+                    <polyline points="2.32,6.16 12,11 21.68,6.16"/>
+                    <line x1="12" y1="22.76" x2="12" y2="11"/>
+                </svg>
+                {{ i18n.model_management }}
+            </button>
+        </nav>
+
+        <!-- Вкладка преобразования голоса -->
+        <div id="voice-conversion" class="tab-content active">
+            <div class="card">
+                <h2 class="card-title">{{ i18n.voice_conversion }}</h2>
+                <form id="voice-conversion-form" class="form">
+                    <!-- Выбор модели -->
+                    <div class="form-group">
+                        <label for="rvc-model" class="label">{{ i18n.select_model }}</label>
+                        <select id="rvc-model" name="rvc_model" class="select" required>
+                            <option value="">{{ i18n.select_model }}...</option>
+                        </select>
+                    </div>
+
+                    <!-- Загрузка аудиофайла -->
+                    <div class="form-group">
+                        <label for="audio-file" class="label">{{ i18n.upload_audio }}</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="audio-file" name="audio_file" class="file-input" accept=".wav,.mp3,.flac,.ogg,.m4a,.aiff,.ac3" required>
+                            <label for="audio-file" class="file-label">
+                                <span class="file-text">{{ i18n.select_audio_file }}</span>
+                                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10,9 9,9 8,9"/>
+                                </svg>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Основные настройки -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="f0-method" class="label">{{ i18n.f0_method }}</label>
+                            <select id="f0-method" name="f0_method" class="select">
+                                <option value="rmvpe+">RMVPE+</option>
+                                <option value="rmvpe">RMVPE</option>
+                                <option value="fcpe">FCPE</option>
+                                <option value="crepe">CREPE</option>
+                                <option value="crepe-tiny">CREPE Tiny</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="output-format" class="label">{{ i18n.output_format }}</label>
+                            <select id="output-format" name="output_format" class="select">
+                                <option value="wav">WAV</option>
+                                <option value="mp3">MP3</option>
+                                <option value="flac">FLAC</option>
+                                <option value="ogg">OGG</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Слайдеры -->
+                    <div class="form-group">
+                        <label for="rvc-pitch" class="label">{{ i18n.pitch_shift }}: <span id="rvc-pitch-value">0</span></label>
+                        <input type="range" id="rvc-pitch" name="rvc_pitch" class="slider" min="-24" max="24" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="protect" class="label">{{ i18n.consonant_protection }}: <span id="protect-value">0.5</span></label>
+                        <input type="range" id="protect" name="protect" class="slider" min="0" max="0.5" step="0.01" value="0.5">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="index-rate" class="label">{{ i18n.index_influence }}: <span id="index-rate-value">0.7</span></label>
+                        <input type="range" id="index-rate" name="index_rate" class="slider" min="0" max="1" step="0.01" value="0.7">
+                    </div>
+
+                    <!-- Дополнительные настройки -->
+                    <details class="details">
+                        <summary class="details-summary">{{ i18n.advanced_settings }}</summary>
+                        <div class="details-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f0-min" class="label">{{ i18n.f0_min }}</label>
+                                    <input type="number" id="f0-min" name="f0_min" class="input" min="1" max="120" value="50">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f0-max" class="label">{{ i18n.f0_max }}</label>
+                                    <input type="number" id="f0-max" name="f0_max" class="input" min="380" max="16000" value="1100">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="volume-envelope" class="label">{{ i18n.volume_envelope }}: <span id="volume-envelope-value">1.0</span></label>
+                                <input type="range" id="volume-envelope" name="volume_envelope" class="slider" min="0" max="1" step="0.01" value="1.0">
+                            </div>
+
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autopitch" name="autopitch" class="checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    {{ i18n.auto_pitch }}
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autotune" name="autotune" class="checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    {{ i18n.auto_tune }}
+                                </label>
+                            </div>
+
+                            <!-- Настройки автопитча -->
+                            <div class="form-group" id="autopitch-settings" style="display: none;">
+                                <label for="autopitch-threshold" class="label">{{ i18n.autopitch_threshold }}: <span id="autopitch-threshold-value">155</span></label>
+                                <input type="range" id="autopitch-threshold" name="autopitch_threshold" class="slider" min="155" max="255" step="1" value="155">
+                            </div>
+
+                            <!-- Настройки автотюна -->
+                            <div class="form-group" id="autotune-settings" style="display: none;">
+                                <label for="autotune-strength" class="label">{{ i18n.autotune_strength }}: <span id="autotune-strength-value">1.0</span></label>
+                                <input type="range" id="autotune-strength" name="autotune_strength" class="slider" min="0" max="1" step="0.1" value="1.0">
+                            </div>
+                        </div>
+                    </details>
+
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 18,22 12,16 6"/>
+                            <polyline points="8 6,2 12,8 18"/>
+                        </svg>
+                        {{ i18n.convert }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Вкладка синтеза речи -->
+        <div id="tts-conversion" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">{{ i18n.text_to_speech }}</h2>
+                <form id="tts-conversion-form" class="form">
+                    <!-- Выбор модели -->
+                    <div class="form-group">
+                        <label for="tts-rvc-model" class="label">{{ i18n.select_model }}</label>
+                        <select id="tts-rvc-model" name="rvc_model" class="select" required>
+                            <option value="">{{ i18n.select_model }}...</option>
+                        </select>
+                    </div>
+
+                    <!-- Текст для синтеза -->
+                    <div class="form-group">
+                        <label for="tts-text" class="label">{{ i18n.enter_text }}</label>
+                        <textarea id="tts-text" name="tts_text" class="textarea" placeholder="{{ i18n.enter_text }}..." required></textarea>
+                    </div>
+
+                    <!-- Выбор голоса -->
+                    <div class="form-group">
+                        <label for="tts-voice" class="label">{{ i18n.select_voice }}</label>
+                        <select id="tts-voice" name="tts_voice" class="select" required>
+                            <option value="">{{ i18n.select_voice }}...</option>
+                        </select>
+                    </div>
+
+                    <!-- Настройки TTS -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tts-rate" class="label">{{ i18n.speech_speed }}: <span id="tts-rate-value">0</span></label>
+                            <input type="range" id="tts-rate" name="tts_rate" class="slider" min="-100" max="100" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="tts-volume" class="label">{{ i18n.volume }}: <span id="tts-volume-value">0</span></label>
+                            <input type="range" id="tts-volume" name="tts_volume" class="slider" min="-100" max="100" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Настройки RVC -->
+                    <div class="form-group">
+                        <label for="tts-rvc-pitch" class="label">{{ i18n.rvc_pitch }}: <span id="tts-rvc-pitch-value">0</span></label>
+                        <input type="range" id="tts-rvc-pitch" name="rvc_pitch" class="slider" min="-24" max="24" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tts-protect" class="label">{{ i18n.consonant_protection }}: <span id="tts-protect-value">0.5</span></label>
+                        <input type="range" id="tts-protect" name="protect" class="slider" min="0" max="0.5" step="0.01" value="0.5">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="23 7,16 12,23 17,23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        {{ i18n.synthesize_convert }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Вкладка управления моделями -->
+        <div id="model-management" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">{{ i18n.model_management }}</h2>
+                
+                <!-- Загрузка модели по URL -->
+                <div class="model-section">
+                    <h3 class="section-title">{{ i18n.download_model }}</h3>
+                    <form id="download-model-form" class="form">
+                        <div class="form-group">
+                            <label for="model-url" class="label">{{ i18n.model_url }}</label>
+                            <input type="url" id="model-url" name="url" class="input" placeholder="https://example.com/model.zip" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="model-name" class="label">{{ i18n.model_name }}</label>
+                            <input type="text" id="model-name" name="model_name" class="input" placeholder="{{ 'my_model' if lang == 'en' else 'моя_модель' }}" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            {{ i18n.download }}
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Загрузка ZIP модели -->
+                <div class="model-section">
+                    <h3 class="section-title">{{ i18n.upload_zip }}</h3>
+                    <form id="upload-zip-form" class="form">
+                        <div class="form-group">
+                            <label for="zip-file" class="label">{{ i18n.select_zip }}</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="zip-file" name="model_file" class="file-input" accept=".zip" required>
+                                <label for="zip-file" class="file-label">
+                                    <span class="file-text">{{ i18n.select_zip }}</span>
+                                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 22h2a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v3"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <path d="M10 20v-1a2 2 0 1 1 4 0v1a2 2 0 1 1-4 0Z"/>
+                                        <path d="M10 7h4"/>
+                                        <path d="M10 11h4"/>
+                                    </svg>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="zip-model-name" class="label">{{ i18n.model_name }}</label>
+                            <input type="text" id="zip-model-name" name="model_name" class="input" placeholder="{{ 'my_model' if lang == 'en' else 'моя_модель' }}" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17,8 12,3 7,8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            {{ i18n.upload }}
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Установка HuBERT модели -->
+                <div class="model-section">
+                    <h3 class="section-title">{{ i18n.hubert_management }}</h3>
+                    <form id="hubert-form" class="form">
+                        <div class="form-group">
+                            <label for="hubert-model" class="label">{{ i18n.select_hubert }}</label>
+                            <select id="hubert-model" name="model_name" class="select" required>
+                                <option value="">{{ i18n.select_hubert }}...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="hubert-url" class="label">{{ i18n.custom_url_optional }}</label>
+                            <input type="url" id="hubert-url" name="custom_url" class="input" placeholder="https://example.com/hubert.pt">
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="10,15 12,17 16,13"/>
+                                <path d="M8 12l2 2 4-4"/>
+                            </svg>
+                            {{ i18n.install }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Область результатов -->
+        <div id="result-area" class="result-area hidden">
+            <div class="card">
+                <h3 class="card-title">{{ i18n.result }}</h3>
+                <div id="result-content" class="result-content"></div>
+            </div>
+        </div>
+
+        <!-- Индикатор загрузки -->
+        <div id="loading" class="loading hidden">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" id="loading-text">{{ i18n.processing }}</p>
+        </div>
+
+        <!-- Уведомления -->
+        <div id="notifications" class="notifications"></div>
+    </div>
+
+    <script>
+        // Глобальная переменная для переводов
+        window.i18n = JSON.parse('{{ i18n | tojson | safe }}');
+        window.currentLang = '{{ lang }}';
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

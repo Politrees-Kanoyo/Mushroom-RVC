@@ -202,7 +202,7 @@ def rvc_infer(
     torch.cuda.empty_cache()
 
     display_progress(1.0, f"[✅] Преобразование завершено — {output_path}", True)
-    return gr.Audio(output_path, label=os.path.basename(output_path))
+    return output_path
 
 
 def rvc_edgetts_infer(
