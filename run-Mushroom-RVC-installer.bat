@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+
 title Mushroom RVC Installer
 cd /d "%~dp0"
 
@@ -31,7 +32,7 @@ if exist "%MINICONDA_DIR%" (
 )
 
 echo Miniconda not found. Starting download and installation...
-powershell -Command "& {Invoke-WebRequest -Uri '%MINICONDA_URL%' -OutFile 'miniconda.exe'}"
+powershell -Command "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%MINICONDA_URL%' -OutFile 'miniconda.exe'"
 if not exist "miniconda.exe" goto :download_error
 
 start /wait "" miniconda.exe /InstallationType=JustMe /RegisterPython=0 /S /D=%MINICONDA_DIR%
@@ -82,10 +83,10 @@ if exist "%PRINCIPAL%\ffmpeg.exe" (
 )
 
 echo Downloading ffmpeg and ffprobe...
-powershell -Command "& {Invoke-WebRequest -Uri 'https://huggingface.co/Politrees/RVC_resources/resolve/main/tools/ffmpeg/ffmpeg.exe?download=true' -OutFile 'ffmpeg.exe'}"
+powershell -Command "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://huggingface.co/Politrees/RVC_resources/resolve/main/tools/ffmpeg/ffmpeg.exe?download=true' -OutFile 'ffmpeg.exe'"
 if not exist "ffmpeg.exe" goto :download_error
 
-powershell -Command "& {Invoke-WebRequest -Uri 'https://huggingface.co/Politrees/RVC_resources/resolve/main/tools/ffmpeg/ffprobe.exe?download=true' -OutFile 'ffprobe.exe'}"
+powershell -Command "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://huggingface.co/Politrees/RVC_resources/resolve/main/tools/ffmpeg/ffprobe.exe?download=true' -OutFile 'ffprobe.exe'"
 if not exist "ffprobe.exe" goto :download_error
 
 echo ffmpeg and ffprobe downloaded successfully.
