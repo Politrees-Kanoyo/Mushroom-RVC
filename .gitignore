@@ -9,5 +9,6 @@
 *.wav
 
 *.txt
+*.pyc
 
 *.ipynb_checkpoints
