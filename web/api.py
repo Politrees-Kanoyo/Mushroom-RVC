@@ -60,27 +60,6 @@ class MushroomRVCAPI:
         autotune_strength: float = 1.0,
         output_format: str = "wav"
     ) -> str:
-        """
-        
-        Args:
-            rvc_model: Название модели RVC
-            input_path: Путь к входному аудиофайлу
-            f0_method: Метод выделения тона (rmvpe, fcpe, crepe, etc.)
-            f0_min: Минимальный диапазон тона
-            f0_max: Максимальный диапазон тона
-            rvc_pitch: Регулировка высоты тона (-24 до 24)
-            protect: Защита согласных (0.0 до 0.5)
-            index_rate: Влияние индекса (0.0 до 1.0)
-            volume_envelope: Скорость смешивания RMS (0.0 до 1.0)
-            autopitch: Автоматическое определение высоты тона
-            autopitch_threshold: Порог автопитча (155.0 для мужских, 255.0 для женских)
-            autotune: Коррекция высоты тона
-            autotune_strength: Сила коррекции автотюна (0.0 до 1.0)
-            output_format: Формат выходного файла
-            
-        Returns:
-            str: Путь к выходному файлу
-        """
         try:
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
@@ -130,20 +109,6 @@ class MushroomRVCAPI:
         tts_volume: int = 0,
         tts_pitch: int = 0
     ) -> Tuple[str, str]:
-        """
-        
-        Args:
-            rvc_model: Название модели RVC
-            tts_text: Текст для синтеза речи
-            tts_voice: Голос для TTS
-            (остальные параметры аналогичны voice_conversion)
-            tts_rate: Скорость речи TTS (-100 до 100)
-            tts_volume: Громкость речи TTS (-100 до 100)
-            tts_pitch: Высота тона TTS (-100 до 100)
-            
-        Returns:
-            Tuple[str, str]: Пути к синтезированному и преобразованному файлам
-        """
         try:
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
@@ -181,15 +146,6 @@ class MushroomRVCAPI:
         url: str,
         model_name: str
     ) -> str:
-        """
-        
-        Args:
-            url: URL для загрузки ZIP-файла модели
-            model_name: Имя модели
-            
-        Returns:
-            str: Сообщение о результате загрузки
-        """
         try:
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
@@ -204,16 +160,12 @@ class MushroomRVCAPI:
         zip_path: str,
         model_name: str
     ) -> str:
-        """
-        
-        Args:
-            zip_path: Путь к ZIP-файлу модели
-            model_name: Имя модели
-            
-        Returns:
-            str: Сообщение о результате загрузки
-        """
         try:
+            try:
+                from gradio import Error as GradioError
+            except ImportError:
+                GradioError = Exception
+
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
@@ -222,7 +174,13 @@ class MushroomRVCAPI:
                 def __init__(self, path):
                     self.name = path
             
-            return _upload_zip_file(FileWrapper(zip_path), model_name, DummyProgress())
+            result = _upload_zip_file(FileWrapper(zip_path), model_name, DummyProgress())
+            
+            return result
+
+        except GradioError as e:
+            error_msg = str(e)
+            raise Exception(error_msg)
         except Exception as e:
             raise Exception(f"Ошибка при загрузке ZIP модели: {str(e)}")
     
@@ -232,16 +190,6 @@ class MushroomRVCAPI:
         index_path: Optional[str],
         model_name: str
     ) -> str:
-        """
-        
-        Args:
-            pth_path: Путь к .pth файлу
-            index_path: Путь к .index файлу (опционально)
-            model_name: Имя модели
-            
-        Returns:
-            str: Сообщение о результате загрузки
-        """
         try:
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
@@ -263,15 +211,6 @@ class MushroomRVCAPI:
         model_name: str = "hubert_base.pt",
         custom_url: Optional[str] = None
     ) -> str:
-        """
-        
-        Args:
-            model_name: Название HuBERT модели из списка доступных
-            custom_url: Пользовательский URL для загрузки (опционально)
-            
-        Returns:
-            str: Сообщение о результате установки
-        """
         try:
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
@@ -283,43 +222,18 @@ class MushroomRVCAPI:
     
     
     def get_available_models(self) -> List[str]:
-        """
-        
-        Returns:
-            List[str]: Список названий моделей
-        """
         return get_folders()
     
     def get_available_voices(self) -> Dict[str, List[str]]:
-        """
-        
-        Returns:
-            Dict[str, List[str]]: Словарь языков и голосов
-        """
         return edge_voices
     
     def get_output_formats(self) -> List[str]:
-        """
-        
-        Returns:
-            List[str]: Список форматов
-        """
         return OUTPUT_FORMAT
     
     def get_hubert_models(self) -> List[str]:
-        """
-        
-        Returns:
-            List[str]: Список HuBERT моделей
-        """
         return HUBERT_MODELS
     
     def get_f0_methods(self) -> List[str]:
-        """
-        
-        Returns:
-            List[str]: Список методов F0
-        """
         return ["rmvpe+", "rmvpe", "fcpe", "crepe", "crepe-tiny"]
     
     def convert_audio_format(
@@ -328,14 +242,6 @@ class MushroomRVCAPI:
         output_path: str,
         output_format: str
     ) -> None:
-        """
-        Конвертация аудиофайла в другой формат
-        
-        Args:
-            input_path: Путь к входному файлу
-            output_path: Путь к выходному файлу
-            output_format: Целевой формат
-        """
         try:
             convert_audio(input_path, output_path, output_format)
         except Exception as e:
@@ -350,19 +256,6 @@ class MushroomRVCAPI:
         pitch: int = 0,
         output_path: str = None
     ) -> str:
-        """
-        
-        Args:
-            voice: Голос для синтеза
-            text: Текст для синтеза
-            rate: Скорость речи (-100 до 100)
-            volume: Громкость (-100 до 100)
-            pitch: Высота тона (-100 до 100)
-            output_path: Путь для сохранения (опционально)
-            
-        Returns:
-            str: Путь к синтезированному файлу
-        """
         try:
             if output_path is None:
                 output_path = os.path.join(OUTPUT_DIR, "synthesized_speech.wav")
@@ -376,47 +269,36 @@ class MushroomRVCAPI:
 api = MushroomRVCAPI()
 
 def voice_conversion(*args, **kwargs):
-    """Обертка для преобразования голоса"""
     return api.voice_conversion(*args, **kwargs)
 
 def text_to_speech_conversion(*args, **kwargs):
-    """Обертка для TTS преобразования"""
     return api.text_to_speech_conversion(*args, **kwargs)
 
 def download_model_from_url(*args, **kwargs):
-    """Обертка для загрузки модели по URL"""
     return api.download_model_from_url(*args, **kwargs)
 
 def upload_model_zip(*args, **kwargs):
-    """Обертка для загрузки ZIP модели"""
     return api.upload_model_zip(*args, **kwargs)
 
 def upload_model_files(*args, **kwargs):
-    """Обертка для загрузки файлов модели"""
     return api.upload_model_files(*args, **kwargs)
 
 def install_hubert_model(*args, **kwargs):
-    """Обертка для установки HuBERT модели"""
     return api.install_hubert_model(*args, **kwargs)
 
 def get_available_models():
-    """Обертка для получения списка моделей"""
     return api.get_available_models()
 
 def get_available_voices():
-    """Обертка для получения списка голосов"""
     return api.get_available_voices()
 
 def get_output_formats():
-    """Обертка для получения форматов вывода"""
     return api.get_output_formats()
 
 def convert_audio_format(*args, **kwargs):
-    """Обертка для конвертации аудио"""
     return api.convert_audio_format(*args, **kwargs)
 
 async def synthesize_speech(*args, **kwargs):
-    """Обертка для синтеза речи"""
     return await api.synthesize_speech(*args, **kwargs)
 
 

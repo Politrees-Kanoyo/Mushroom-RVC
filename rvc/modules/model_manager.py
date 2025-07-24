@@ -11,13 +11,14 @@ from rvc.modules.download_source import download_file
 rvc_models_dir = os.path.join(os.getcwd(), "models", "RVC_models")
 os.makedirs(rvc_models_dir, exist_ok=True)
 
-
 # Распаковывает zip-файл в указанную директорию и находит файлы модели (.pth и .index)
 def extract_zip(extraction_folder, zip_name):
     os.makedirs(extraction_folder, exist_ok=True)  # Создаем директорию для распаковки, если она не существует
-    with zipfile.ZipFile(zip_name, "r") as zip_ref:
-        zip_ref.extractall(extraction_folder)  # Распаковываем zip-файл
-    os.remove(zip_name)  # Удаляем zip-файл после распаковки
+    try:
+        with zipfile.ZipFile(zip_name, "r") as zip_ref:
+            zip_ref.extractall(extraction_folder)  # Распаковываем zip-файл
+    except Exception as e:
+        raise
 
     index_filepath, model_filepath = None, None
     # Проходим по всем файлам в распакованной директории для поиска .pth и .index

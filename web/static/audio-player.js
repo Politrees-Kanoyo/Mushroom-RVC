@@ -34,9 +34,6 @@ class AudioPlayer {
                             <polygon points="5,3 19,12 5,21" />
                         </svg>
                     </button>
-                    <div class="time-display">
-                        <span class="current-time">0:00</span> / <span class="duration">0:00</span>
-                    </div>
                     <button class="player-btn download-btn" title="Скачать">
                         <svg class="player-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -44,6 +41,9 @@ class AudioPlayer {
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                     </button>
+                    <div class="time-display">
+                        <span class="current-time">0:00</span> / <span class="duration">0:00</span>
+                    </div>
                     <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1" title="Громкость">
                 </div>
             </div>
@@ -84,7 +84,6 @@ class AudioPlayer {
         
         this.audio.addEventListener('loadedmetadata', () => {
             this.durationDisplay.textContent = this.formatTime(this.audio.duration);
-            // Генерируем волну асинхронно
             this.generateWaveform();
         });
         
@@ -146,22 +145,17 @@ class AudioPlayer {
         if (!this.audio) return;
         
         try {
-            // Создаем AudioContext для анализа аудио
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
-            // Получаем аудиоданные
             const response = await fetch(this.audio.src);
             const arrayBuffer = await response.arrayBuffer();
             this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
             
-            // Извлекаем данные волны
             this.extractWaveformData();
             
-            // Рисуем настоящую волну
             this.drawRealWaveform();
         } catch (error) {
             console.warn('Не удалось загрузить настоящую волну, используем упрощенную:', error);
-            // Fallback к упрощенной волне
             this.drawSimplifiedWaveform();
         }
     }
@@ -169,8 +163,8 @@ class AudioPlayer {
     extractWaveformData() {
         if (!this.audioBuffer) return;
         
-        const channelData = this.audioBuffer.getChannelData(0); // Используем первый канал
-        const samples = 1000; // Количество точек для отображения
+        const channelData = this.audioBuffer.getChannelData(0); 
+        const samples = 1000; 
         const blockSize = Math.floor(channelData.length / samples);
         this.waveformData = [];
         
@@ -189,7 +183,6 @@ class AudioPlayer {
         const width = this.waveformCanvas.offsetWidth;
         const height = this.waveformCanvas.offsetHeight;
         
-        // Устанавливаем размеры canvas
         this.waveformCanvas.width = width;
         this.waveformCanvas.height = height;
         
@@ -198,9 +191,8 @@ class AudioPlayer {
         
         const centerY = height / 2;
         const maxAmplitude = Math.max(...this.waveformData);
-        const amplitudeScale = (height / 2) * 0.8; // 80% от половины высоты
+        const amplitudeScale = (height / 2) * 0.8; 
         
-        // Рисуем настоящую волну
         ctx.beginPath();
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#6366f1';
@@ -219,7 +211,6 @@ class AudioPlayer {
         
         ctx.stroke();
         
-        // Рисуем отражение волны снизу
         ctx.beginPath();
         for (let i = 0; i < this.waveformData.length; i++) {
             const x = (i / this.waveformData.length) * width;
@@ -235,11 +226,9 @@ class AudioPlayer {
         
         ctx.stroke();
         
-        // Рисуем залитую область
         ctx.beginPath();
         ctx.moveTo(0, centerY);
         
-        // Верхняя часть волны
         for (let i = 0; i < this.waveformData.length; i++) {
             const x = (i / this.waveformData.length) * width;
             const amplitude = (this.waveformData[i] / maxAmplitude) * amplitudeScale;
@@ -247,7 +236,6 @@ class AudioPlayer {
             ctx.lineTo(x, y);
         }
         
-        // Нижняя часть волны (в обратном порядке)
         for (let i = this.waveformData.length - 1; i >= 0; i--) {
             const x = (i / this.waveformData.length) * width;
             const amplitude = (this.waveformData[i] / maxAmplitude) * amplitudeScale;
@@ -257,7 +245,6 @@ class AudioPlayer {
         
         ctx.closePath();
         
-        // Создаем градиент для заливки
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
         gradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.1)');
@@ -272,17 +259,15 @@ class AudioPlayer {
         const width = this.waveformCanvas.offsetWidth;
         const height = this.waveformCanvas.offsetHeight;
         
-        // Устанавливаем размеры canvas
         this.waveformCanvas.width = width;
         this.waveformCanvas.height = height;
         
         const ctx = this.waveformCtx;
         ctx.clearRect(0, 0, width, height);
         
-        // Рисуем упрощенную волну с более ярким цветом
         ctx.beginPath();
         ctx.lineWidth = 3;
-        ctx.strokeStyle = '#6366f1'; // Более яркий цвет
+        ctx.strokeStyle = '#6366f1'; 
         
         const centerY = height / 2;
         const amplitude = height / 3;
@@ -290,7 +275,6 @@ class AudioPlayer {
         
         for (let i = 0; i <= points; i++) {
             const x = (i / points) * width;
-            // Создаем более сложную волну для лучшего визуального эффекта
             const y = centerY + 
                 Math.sin(i * 0.2) * amplitude * 0.4 + 
                 Math.sin(i * 0.5) * amplitude * 0.2;
@@ -304,7 +288,6 @@ class AudioPlayer {
         
         ctx.stroke();
         
-        // Рисуем залитую область под волной
         ctx.beginPath();
         ctx.moveTo(0, centerY);
         
@@ -319,7 +302,6 @@ class AudioPlayer {
         ctx.lineTo(width, centerY);
         ctx.closePath();
         
-        // Создаем градиент для заливки
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
         gradient.addColorStop(1, 'rgba(99, 102, 241, 0.05)');
@@ -354,19 +336,15 @@ class AudioPlayer {
             cancelAnimationFrame(this.animationFrame);
         }
         
-        // Закрываем AudioContext для освобождения ресурсов
         if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
         }
         
-        // Очищаем данные
         this.audioBuffer = null;
         this.waveformData = null;
         this.audioContext = null;
     }
 }
 
-// Инициализация плеера при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // Можно инициализировать плееры здесь, если нужно
 });

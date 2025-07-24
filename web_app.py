@@ -24,8 +24,7 @@ from web.api import (
     synthesize_speech
 )
 
-# Определение языка из аргументов командной строки
-CURRENT_LANGUAGE = 'ru'  # По умолчанию
+CURRENT_LANGUAGE = 'ru'  
 if '--lang' in sys.argv:
     lang_index = sys.argv.index('--lang')
     if lang_index + 1 < len(sys.argv):
@@ -33,12 +32,10 @@ if '--lang' in sys.argv:
         if lang in ['ru', 'en']:
             CURRENT_LANGUAGE = lang
 
-# Создание Flask приложения
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
 app.config['SECRET_KEY'] = 'mushroom-rvc-web-ui'
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB максимум
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  
 
-# Словари переводов
 I18N = {
     'ru': {
         'title': 'Mushroom RVC Web UI',
@@ -138,36 +135,29 @@ I18N = {
     }
 }
 
-# Инициализация API
 api = MushroomRVCAPI()
 
-# Папки для загрузки файлов
 UPLOAD_FOLDER = 'temp_uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Разрешенные расширения файлов
 ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'flac', 'ogg', 'm4a', 'aiff', 'ac3'}
 ALLOWED_MODEL_EXTENSIONS = {'zip', 'pth', 'index'}
 
 def allowed_file(filename, allowed_extensions):
-    """Проверка разрешенных расширений файлов"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 @app.route('/')
 def index():
-    """Главная страница"""
     return render_template('index.html', i18n=I18N[CURRENT_LANGUAGE], lang=CURRENT_LANGUAGE)
 
 @app.route('/api/i18n')
 def get_i18n():
-    """Получить переводы для текущего языка"""
     return jsonify(I18N[CURRENT_LANGUAGE])
 
 @app.route('/api/set-language', methods=['POST'])
 def set_language():
-    """Установить язык интерфейса"""
     global CURRENT_LANGUAGE
     data = request.get_json()
     lang = data.get('language', 'ru')
@@ -180,7 +170,6 @@ def set_language():
 
 @app.route('/api/models')
 def get_models():
-    """Получение списка доступных RVC моделей"""
     try:
         models = get_available_models()
         return jsonify({'success': True, 'models': models})
@@ -189,7 +178,6 @@ def get_models():
 
 @app.route('/api/voices')
 def get_voices():
-    """Получение списка доступных TTS голосов"""
     try:
         voices = get_available_voices()
         return jsonify({'success': True, 'voices': voices})
@@ -198,7 +186,6 @@ def get_voices():
 
 @app.route('/api/formats')
 def get_formats():
-    """Получение списка поддерживаемых форматов"""
     try:
         formats = get_output_formats()
         return jsonify({'success': True, 'formats': formats})
@@ -207,7 +194,6 @@ def get_formats():
 
 @app.route('/api/f0-methods')
 def get_f0_methods():
-    """Получение списка методов выделения тона"""
     try:
         methods = api.get_f0_methods()
         return jsonify({'success': True, 'methods': methods})
@@ -216,7 +202,6 @@ def get_f0_methods():
 
 @app.route('/api/hubert-models')
 def get_hubert_models():
-    """Получение списка HuBERT моделей"""
     try:
         models = api.get_hubert_models()
         return jsonify({'success': True, 'models': models})
@@ -225,9 +210,7 @@ def get_hubert_models():
 
 @app.route('/api/voice-conversion', methods=['POST'])
 def api_voice_conversion():
-    """API для преобразования голоса"""
     try:
-        # Получение файла
         if 'audio_file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не найден'})
         
@@ -238,12 +221,10 @@ def api_voice_conversion():
         if not allowed_file(file.filename, ALLOWED_AUDIO_EXTENSIONS):
             return jsonify({'success': False, 'error': 'Неподдерживаемый формат файла'})
         
-        # Сохранение файла
         filename = secure_filename(file.filename)
         input_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(input_path)
         
-        # Получение параметров
         rvc_model = request.form.get('rvc_model')
         f0_method = request.form.get('f0_method', 'rmvpe+')
         f0_min = int(request.form.get('f0_min', 50))
@@ -258,7 +239,6 @@ def api_voice_conversion():
         autotune_strength = float(request.form.get('autotune_strength', 0.8))
         output_format = request.form.get('output_format', 'wav')
         
-        # Выполнение преобразования
         output_path = voice_conversion(
             rvc_model=rvc_model,
             input_path=input_path,
@@ -276,7 +256,6 @@ def api_voice_conversion():
             output_format=output_format
         )
         
-        # Удаление временного файла
         os.remove(input_path)
         
         return jsonify({
@@ -290,11 +269,9 @@ def api_voice_conversion():
 
 @app.route('/api/tts-conversion', methods=['POST'])
 def api_tts_conversion():
-    """API для синтеза речи с преобразованием голоса"""
     try:
         data = request.get_json()
         
-        # Получение параметров
         rvc_model = data.get('rvc_model')
         tts_text = data.get('tts_text')
         tts_voice = data.get('tts_voice')
@@ -307,7 +284,6 @@ def api_tts_conversion():
         volume_envelope = float(data.get('volume_envelope', 1.0))
         output_format = data.get('output_format', 'wav')
         
-        # Выполнение TTS + преобразования
         synth_path, converted_path = text_to_speech_conversion(
             rvc_model=rvc_model,
             tts_text=tts_text,
@@ -334,7 +310,6 @@ def api_tts_conversion():
 
 @app.route('/api/download-model', methods=['POST'])
 def api_download_model():
-    """API для загрузки модели по URL"""
     try:
         data = request.get_json()
         url = data.get('url')
@@ -348,7 +323,6 @@ def api_download_model():
 
 @app.route('/api/upload-model-zip', methods=['POST'])
 def api_upload_model_zip():
-    """API для загрузки ZIP модели"""
     try:
         if 'model_file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не найден'})
@@ -361,26 +335,48 @@ def api_upload_model_zip():
             return jsonify({'success': False, 'error': 'Требуется ZIP файл'})
         
         model_name = request.form.get('model_name')
+        if not model_name or model_name.strip() == '':
+            return jsonify({'success': False, 'error': 'Имя модели не указано'})
         
-        # Сохранение файла
         filename = secure_filename(file.filename)
         zip_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(zip_path)
         
-        # Загрузка модели
-        result = upload_model_zip(zip_path=zip_path, model_name=model_name)
-        
-        # Удаление временного файла
-        os.remove(zip_path)
-        
-        return jsonify({'success': True, 'message': result})
+        try:
+            file.save(zip_path)
+            print(f"[DEBUG] Файл сохранен: {zip_path}, существует: {os.path.exists(zip_path)}")
+        except Exception as save_error:
+            print(f"[ERROR] Ошибка сохранения файла: {save_error}")
+            return jsonify({'success': False, 'error': f'Ошибка сохранения файла: {str(save_error)}'})
+        try:
+            print(f"[DEBUG] Начинаем загрузку модели из: {zip_path}")
+            result = upload_model_zip(zip_path=zip_path, model_name=model_name)
+            print(f"[DEBUG] Загрузка завершена успешно: {result}")
+            
+            if os.path.exists(zip_path):
+                try:
+                    os.remove(zip_path)
+                    print(f"[DEBUG] Временный файл удален: {zip_path}")
+                except Exception as remove_error:
+                    print(f"[WARNING] Не удалось удалить временный файл: {remove_error}")
+            
+            return jsonify({'success': True, 'message': result})
+        except Exception as upload_error:
+            print(f"[ERROR] Ошибка загрузки модели: {upload_error}")
+            
+            if os.path.exists(zip_path):
+                try:
+                    os.remove(zip_path)
+                    print(f"[DEBUG] Временный файл удален после ошибки: {zip_path}")
+                except Exception as remove_error:
+                    print(f"[WARNING] Не удалось удалить временный файл после ошибки: {remove_error}")
+            
+            return jsonify({'success': False, 'error': str(upload_error)})
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/install-hubert', methods=['POST'])
 def api_install_hubert():
-    """API для установки HuBERT модели"""
     try:
         data = request.get_json()
         model_name = data.get('model_name')
@@ -398,7 +394,6 @@ def api_install_hubert():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    """Скачивание выходных файлов"""
     try:
         # Поиск файла в папке вывода
         output_dir = 'output/RVC_output'
@@ -414,21 +409,17 @@ def download_file(filename):
 
 @app.errorhandler(413)
 def too_large(e):
-    """Обработка ошибки превышения размера файла"""
     return jsonify({'success': False, 'error': 'Файл слишком большой'}), 413
 
 @app.errorhandler(404)
 def not_found(e):
-    """Обработка ошибки 404"""
     return jsonify({'error': 'Страница не найдена'}), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    """Обработка внутренних ошибок сервера"""
     return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
 
 if __name__ == '__main__':
-    # Парсинг аргументов командной строки
     parser = argparse.ArgumentParser(description='Mushroom RVC Web UI')
     parser.add_argument('--lang', choices=['ru', 'en'], default='ru', 
                        help='Язык интерфейса (ru/en) / Interface language (ru/en)')

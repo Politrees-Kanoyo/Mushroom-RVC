@@ -485,6 +485,65 @@ body {
     cursor: not-allowed;
 }
 
+/* Контейнер для селектора с кнопкой обновления */
+.select-with-refresh {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.select-with-refresh .select {
+    flex: 1;
+}
+
+.refresh-btn {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    color: white;
+}
+
+.refresh-btn:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.refresh-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+.refresh-btn .refresh-icon {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s ease;
+}
+
+.refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #a5b4fc;
+    border-color: #a5b4fc;
+    transform: none;
+    box-shadow: none;
+    color: white;
+}
+
+.refresh-btn:disabled .refresh-icon {
+    color: white;
+}
+
 /* Секции моделей */
 .model-section {
     padding: var(--spacing-lg);

@@ -5,8 +5,9 @@ let currentF0Methods = [];
 let currentHubertModels = [];
 let i18n = window.i18n || {};
 let currentLang = window.currentLang || 'ru';
-// Глобальная переменная для отслеживания текущего аудиоплеера
 let currentAudioPlayer = null;
+let voiceConversionPlayer = null;
+let ttsConversionPlayer = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -32,8 +33,29 @@ function setupTabNavigation() {
             navButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(tab => tab.classList.remove('active'));
             
+            const resultAreas = document.querySelectorAll('.result-area');
+            resultAreas.forEach(area => area.classList.add('hidden'));
+            
             button.classList.add('active');
             document.getElementById(targetTab).classList.add('active');
+            
+            if (targetTab === 'voice-conversion') {
+                const voiceResult = document.getElementById('voice-conversion-result');
+                if (voiceResult && voiceResult.querySelector('.result-content').innerHTML.trim() !== '') {
+                    voiceResult.classList.remove('hidden');
+                }
+                if (voiceConversionPlayer) {
+                    currentAudioPlayer = voiceConversionPlayer;
+                }
+            } else if (targetTab === 'tts-conversion') {
+                const ttsResult = document.getElementById('tts-conversion-result');
+                if (ttsResult && ttsResult.querySelector('.result-content').innerHTML.trim() !== '') {
+                    ttsResult.classList.remove('hidden');
+                }
+                if (ttsConversionPlayer) {
+                    currentAudioPlayer = ttsConversionPlayer;
+                }
+            }
         });
     });
 }
@@ -109,6 +131,16 @@ function setupForms() {
         hubertForm.addEventListener('submit', handleInstallHubert);
     }
     
+    const refreshRvcBtn = document.getElementById('refresh-rvc-models');
+    if (refreshRvcBtn) {
+        refreshRvcBtn.addEventListener('click', handleRefreshRvcModels);
+    }
+
+    const refreshTtsBtn = document.getElementById('refresh-tts-models');
+    if (refreshTtsBtn) {
+        refreshTtsBtn.addEventListener('click', handleRefreshTtsModels);
+    }
+    
     setupAutopitchAutotune();
 }
 
@@ -117,10 +149,27 @@ function setupAutopitchAutotune() {
     const autotuneCheckbox = document.getElementById('autotune');
     const autopitchSettings = document.getElementById('autopitch-settings');
     const autotuneSettings = document.getElementById('autotune-settings');
+    const pitchSlider = document.getElementById('rvc-pitch');
+    const pitchGroup = pitchSlider ? pitchSlider.closest('.form-group') : null;
     
     if (autopitchCheckbox && autopitchSettings) {
         autopitchCheckbox.addEventListener('change', function() {
             autopitchSettings.style.display = this.checked ? 'block' : 'none';
+            
+            if (pitchGroup) {
+                pitchGroup.style.visibility = this.checked ? 'hidden' : 'visible';
+                pitchGroup.style.height = this.checked ? '0' : 'auto';
+                pitchGroup.style.overflow = this.checked ? 'hidden' : 'visible';
+                pitchGroup.style.marginBottom = this.checked ? '0' : '';
+            }
+            
+            if (this.checked) {
+                const pitchValue = document.getElementById('rvc-pitch-value');
+                if (pitchSlider && pitchValue) {
+                    pitchSlider.value = '0';
+                    pitchValue.textContent = '0';
+                }
+            }
         });
     }
     
@@ -350,32 +399,26 @@ async function handleVoiceConversion(event) {
         return;
     }
     
-    // Останавливаем предыдущее аудио
     if (currentAudioPlayer) {
         currentAudioPlayer.destroy();
         currentAudioPlayer = null;
     }
     
-    // Исправляем передачу параметров автопитча и автотюна
     const autopitchChecked = document.getElementById('autopitch').checked;
     const autotuneChecked = document.getElementById('autotune').checked;
     
-    // Передаем булевы значения как строки для корректной обработки на сервере
     formData.set('autopitch', autopitchChecked ? 'true' : 'false');
     formData.set('autotune', autotuneChecked ? 'true' : 'false');
     
-    // Передаем пороговые значения
     if (autopitchChecked) {
         formData.set('autopitch_threshold', document.getElementById('autopitch-threshold').value);
     } else {
-        // Когда автопитч отключен, передаем значение по умолчанию
         formData.set('autopitch_threshold', '155.0');
     }
     
     if (autotuneChecked) {
         formData.set('autotune_strength', document.getElementById('autotune-strength').value);
     } else {
-        // Когда автотюн отключен, передаем значение по умолчанию
         formData.set('autotune_strength', '1.0');
     }
     
@@ -412,7 +455,6 @@ async function handleVoiceConversion(event) {
 async function handleTTSConversion(event) {
     event.preventDefault();
     
-    // Останавливаем предыдущее аудио
     if (currentAudioPlayer) {
         currentAudioPlayer.destroy();
         currentAudioPlayer = null;
@@ -503,9 +545,16 @@ async function handleUploadZip(event) {
     
     const formData = new FormData(event.target);
     const modelFile = formData.get('model_file');
+    const modelName = formData.get('model_name');
     
     if (!modelFile || modelFile.size === 0) {
         showNotification('Пожалуйста, выберите ZIP файл', 'error');
+        return;
+    }
+    
+    if (!modelName || modelName.trim() === '') {
+        const errorMsg = currentLang === 'ru' ? 'Пожалуйста, введите имя модели' : 'Please enter model name';
+        showNotification(errorMsg, 'error');
         return;
     }
     
@@ -580,8 +629,19 @@ async function handleInstallHubert(event) {
 }
 
 function showResult(result) {
-    const resultArea = document.getElementById('result-area');
-    const resultContent = document.getElementById('result-content');
+    let resultArea, resultContent, playerContainerId, playerVariable;
+    
+    if (result.type === 'voice-conversion') {
+        resultArea = document.getElementById('voice-conversion-result');
+        resultContent = document.getElementById('voice-conversion-result-content');
+        playerContainerId = 'voice-conversion-audio-player';
+        playerVariable = 'voiceConversionPlayer';
+    } else if (result.type === 'tts-conversion') {
+        resultArea = document.getElementById('tts-conversion-result');
+        resultContent = document.getElementById('tts-conversion-result-content');
+        playerContainerId = 'tts-conversion-audio-player';
+        playerVariable = 'ttsConversionPlayer';
+    }
     
     if (!resultArea || !resultContent) return;
     
@@ -594,7 +654,7 @@ function showResult(result) {
         html = `
             <h4>${titleText}</h4>
             <p><strong>${fileText}</strong> ${result.outputPath}</p>
-            <div class="audio-player-container" id="audio-player-container"></div>
+            <div class="audio-player-container" id="${playerContainerId}"></div>
         `;
     } else if (result.type === 'tts-conversion') {
         const titleText = currentLang === 'ru' ? 'Синтез и преобразование завершены' : 'Synthesis and conversion completed';
@@ -605,26 +665,35 @@ function showResult(result) {
             <h4>${titleText}</h4>
             <p><strong>${synthText}</strong> ${result.synthPath}</p>
             <p><strong>${convertedText}</strong> ${result.convertedPath}</p>
-            <div class="audio-player-container" id="audio-player-container"></div>
+            <div class="audio-player-container" id="${playerContainerId}"></div>
         `;
     }
     
     resultContent.innerHTML = html;
     resultArea.classList.remove('hidden');
     
-    // Останавливаем и уничтожаем предыдущий плеер, если он существует
-    if (currentAudioPlayer) {
-        currentAudioPlayer.destroy();
-        currentAudioPlayer = null;
+    if (result.type === 'voice-conversion' && voiceConversionPlayer) {
+        voiceConversionPlayer.destroy();
+        voiceConversionPlayer = null;
+    } else if (result.type === 'tts-conversion' && ttsConversionPlayer) {
+        ttsConversionPlayer.destroy();
+        ttsConversionPlayer = null;
     }
     
-    // Инициализируем новый аудиоплеер после добавления HTML в DOM
     if (result.downloadUrl) {
         setTimeout(() => {
-            const playerContainer = document.getElementById('audio-player-container');
+            const playerContainer = document.getElementById(playerContainerId);
             if (playerContainer) {
-                currentAudioPlayer = new AudioPlayer(playerContainer);
-                currentAudioPlayer.loadAudio(result.downloadUrl, result.outputPath || 'result.mp3');
+                const newPlayer = new AudioPlayer(playerContainer);
+                newPlayer.loadAudio(result.downloadUrl, result.outputPath || 'result.mp3');
+                
+                if (result.type === 'voice-conversion') {
+                    voiceConversionPlayer = newPlayer;
+                } else if (result.type === 'tts-conversion') {
+                    ttsConversionPlayer = newPlayer;
+                }
+                
+                currentAudioPlayer = newPlayer;
             }
         }, 100);
     }
@@ -740,4 +809,54 @@ function handleNetworkError(error) {
         return 'Ошибка сети. Проверьте подключение к интернету.';
     }
     return error.message || 'Произошла неизвестная ошибка';
+}
+
+async function handleRefreshRvcModels() {
+    
+    const refreshBtn = document.getElementById('refresh-rvc-models');
+    const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+    
+    refreshIcon.style.transform = 'rotate(360deg)';
+    refreshBtn.disabled = true;
+    
+    try {
+        await loadModels();
+        
+        const message = currentLang === 'ru' ? 'Список моделей обновлен' : 'Models list updated';
+        showNotification(message, 'success');
+        
+    } catch (error) {
+        const message = currentLang === 'ru' ? 'Ошибка при обновлении моделей' : 'Error updating models';
+        showNotification(message, 'error');
+    } finally {
+        setTimeout(() => {
+            refreshIcon.style.transform = '';
+            refreshBtn.disabled = false;
+        }, 300);
+    }
+}
+
+async function handleRefreshTtsModels() {
+    
+    const refreshBtn = document.getElementById('refresh-tts-models');
+    const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+    
+    refreshIcon.style.transform = 'rotate(360deg)';
+    refreshBtn.disabled = true;
+    
+    try {
+        await loadModels();
+        
+        const message = currentLang === 'ru' ? 'Список моделей обновлен' : 'Models list updated';
+        showNotification(message, 'success');
+        
+    } catch (error) {
+        const message = currentLang === 'ru' ? 'Ошибка при обновлении моделей' : 'Error updating models';
+        showNotification(message, 'error');
+    } finally {
+        setTimeout(() => {
+            refreshIcon.style.transform = '';
+            refreshBtn.disabled = false;
+        }, 300);
+    }
 }
