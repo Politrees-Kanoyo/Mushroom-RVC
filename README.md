@@ -9,4 +9,4 @@
 
 ---
 
-<img src="https://counter.seku.su/cmoe?name=Mushroom-RVC&theme=mbs"/><br>
+<img src="https://counter.seku.su/cmoe?name=Nooshell-RVC&theme=mbs"/><br>
