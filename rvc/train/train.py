@@ -38,6 +38,8 @@ from rvc.train.utils.train_utils import HParams, attempt_load_checkpoint_pair, s
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
 
+global_step = 0
+
 
 def generate_config(config_save_path, sample_rate, vocoder):
     config_path = os.path.join("rvc", "train", "configs", f"{sample_rate}.json")
@@ -136,6 +138,7 @@ def main():
 
 
 def run(hps, rank, n_gpus, device, device_id, global_step):
+    global global_step
     try:
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval")) if rank == 0 else None
         fn_mel_loss = MultiScaleMelSpectrogramLoss(sample_rate=hps.data.sample_rate)
@@ -270,6 +273,8 @@ def run(hps, rank, n_gpus, device, device_id, global_step):
 
 
 def train_and_evaluate(hps, rank, epoch, global_step, nets, optims, train_loader, writer_eval, fn_mel_loss, device):
+    global global_step
+
     net_g, net_d = nets
     optim_g, optim_d = optims
     train_loader.batch_sampler.set_epoch(epoch)
