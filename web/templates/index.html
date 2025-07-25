@@ -393,6 +393,24 @@
                             </svg>
                             {{ i18n.download }}
                         </button>
+                        
+                        <!-- Прогресс-бар для загрузки модели по URL -->
+                        <div id="model-download-progress" class="upload-progress hidden">
+                            <div class="progress-file-info">
+                                <span class="progress-file-name">{{ 'Загрузка модели' if lang == 'ru' else 'Downloading model' }}</span>
+                                <span class="progress-file-size">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="progress-percentage">0%</span>
+                                <div class="progress-status">
+                                    <span class="loading-spinner"></span>
+                                    <span class="progress-status-text">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
 

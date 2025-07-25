@@ -89,10 +89,9 @@ function setupSliders() {
 let uploadedAudioFile = null;
 
 function setupFileInputs() {
-    const fileInputs = document.querySelectorAll('.file-input');
-    
-    fileInputs.forEach(input => {
-        input.addEventListener('change', async function() {
+    const audioFileInput = document.getElementById('audio-file');
+    if (audioFileInput) {
+        audioFileInput.addEventListener('change', async function() {
             const label = this.nextElementSibling;
             const textElement = label.querySelector('.file-text');
             
@@ -122,7 +121,33 @@ function setupFileInputs() {
                 uploadedAudioFile = null;
             }
         });
-    });
+    }
+    
+    const zipFileInput = document.getElementById('zip-file');
+    if (zipFileInput) {
+        zipFileInput.addEventListener('change', function() {
+            const label = this.nextElementSibling;
+            const textElement = label.querySelector('.file-text');
+            
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                textElement.textContent = file.name;
+                label.style.borderColor = 'var(--primary-color)';
+                
+                if (file.size > 500 * 1024 * 1024) {
+                    const errorMsg = currentLang === 'ru' ? 'Размер файла не должен превышать 500MB' : 'File size should not exceed 500MB';
+                    showNotification(errorMsg, 'error');
+                    this.value = '';
+                    textElement.textContent = i18n.select_zip_file || 'Выберите ZIP файл';
+                    label.style.borderColor = 'var(--border-color)';
+                    return;
+                }
+            } else {
+                textElement.textContent = i18n.select_zip_file || 'Выберите ZIP файл';
+                label.style.borderColor = 'var(--border-color)';
+            }
+        });
+    }
 }
 
 async function uploadAudioFile(file) {
@@ -596,6 +621,9 @@ async function handleDownloadModel(event) {
         model_name: formData.get('model_name')
     };
     
+    const progressId = 'model-download-progress';
+    showModelDownloadProgress(progressId, requestData.model_name);
+    
     try {
         const response = await fetch('/api/download-model', {
             method: 'POST',
@@ -608,15 +636,21 @@ async function handleDownloadModel(event) {
         const data = await response.json();
         
         if (data.success) {
+            updateUploadProgress(progressId, 100, 'complete');
             const successMsg = currentLang === 'ru' ? 'Модель успешно загружена!' : 'Model downloaded successfully!';
             showNotification(successMsg, 'success');
             await loadModels(); 
             event.target.reset();
+            hideUploadProgress(progressId, 2000);
         } else {
+            updateUploadProgress(progressId, 0, 'error');
+            hideUploadProgress(progressId, 1000);
             throw new Error(data.error);
         }
     } catch (error) {
         console.error('Ошибка загрузки модели:', error);
+        updateUploadProgress(progressId, 0, 'error');
+        hideUploadProgress(progressId, 1000);
         const errorMsg = currentLang === 'ru' ? 'Ошибка загрузки модели: ' + error.message : 'Model download error: ' + error.message;
         showNotification(errorMsg, 'error');
     }
@@ -1001,8 +1035,8 @@ function showUploadProgress(progressId, file = null) {
         progressElement.classList.add('active');
         
         if (file) {
-            const fileName = progressElement.querySelector('.progress-filename');
-            const fileSize = progressElement.querySelector('.progress-filesize');
+            const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
+            const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
             
             if (fileName) {
                 fileName.textContent = file.name;
@@ -1024,8 +1058,8 @@ function hideUploadProgress(progressId, delay = 0) {
             progressElement.classList.add('hidden');
             progressElement.classList.remove('active');
             
-            const fileName = progressElement.querySelector('.progress-filename');
-            const fileSize = progressElement.querySelector('.progress-filesize');
+            const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
+            const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
             const progressSpeed = progressElement.querySelector('.progress-speed');
             const progressEta = progressElement.querySelector('.progress-eta');
             const progressSize = progressElement.querySelector('.progress-size');
@@ -1039,6 +1073,38 @@ function hideUploadProgress(progressId, delay = 0) {
             updateUploadProgress(progressId, 0, 'preparing');
         }
     }, delay);
+}
+
+function showModelDownloadProgress(progressId, modelName) {
+    const progressElement = document.getElementById(progressId);
+    if (progressElement) {
+        progressElement.classList.remove('hidden');
+        progressElement.classList.add('active');
+        
+        const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
+        const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
+        
+        if (fileName) {
+            fileName.textContent = modelName;
+        }
+        
+        if (fileSize) {
+            fileSize.textContent = currentLang === 'ru' ? 'Загрузка...' : 'Downloading...';
+        }
+        
+        updateUploadProgress(progressId, 0, 'preparing');
+        
+        simulateModelDownloadProgress(progressId);
+    }
+}
+
+async function simulateModelDownloadProgress(progressId) {
+    const steps = [10, 25, 40, 60, 80, 95];
+    
+    for (const step of steps) {
+        updateUploadProgress(progressId, step, 'uploading');
+        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300));
+    }
 }
 
 function updateUploadProgress(progressId, percentage, status = 'uploading', details = {}) {
