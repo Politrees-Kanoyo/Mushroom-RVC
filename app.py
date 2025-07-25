@@ -37,7 +37,7 @@ def is_offline_mode() -> bool:
 
 
 with gr.Blocks(
-    title="Mushroom RVC - Politrees" if not is_offline_mode() else "Mushroom RVC (offline) - Politrees",
+    title="Mushroom RVC" if not is_offline_mode() else "Mushroom RVC (offline)",
     css="footer{display:none !important}",
     theme=gr.themes.Soft(
         primary_hue="green",

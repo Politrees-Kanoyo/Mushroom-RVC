@@ -122,7 +122,7 @@ def extract_model(hps, ckpt, epoch, step, final_save):
         opt["vocoder"] = hps.model.vocoder
 
         # Дополнительные метаданные
-        opt["learning_environment"] = "PolTrain"
+        opt["learning_environment"] = "MushroomRVC"
 
         # Сохранение модели
         torch.save(
