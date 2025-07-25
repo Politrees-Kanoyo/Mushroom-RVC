@@ -11,6 +11,15 @@ from contextlib import contextmanager
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Глобальная переменная для отслеживания прогресса конвертации
+current_conversion_progress = {
+    'progress': 0.0,
+    'current_step': 0,
+    'total_steps': 8,
+    'step_name': 'Ожидание',
+    'description': 'Ожидание начала конвертации'
+}
+
 from rvc.infer.infer import (
     rvc_infer as _rvc_infer,
     rvc_edgetts_infer as _rvc_edgetts_infer,
@@ -102,9 +111,53 @@ class MushroomRVCAPI:
             if file_size > 500:  # 500 MB лимит
                 raise Exception(f"Размер файла ({file_size:.1f} MB) превышает лимит 500 MB")
             
-            class DummyProgress:
-                def __call__(self, *args, **kwargs):
-                    pass
+            class ProgressTracker:
+                def __init__(self):
+                    self.current_step = 0
+                    self.total_steps = 8  # Соответствует шагам в rvc_infer
+                    self.step_names = {
+                        0: "Инициализация",
+                        1: "Загрузка модели Hubert", 
+                        2: "Загрузка RVC модели",
+                        3: "Загрузка индекса",
+                        4: "Получение конвертера голоса",
+                        5: "Загрузка аудиофайла",
+                        6: "Преобразование аудио",
+                        7: "Сохранение результата"
+                    }
+                    
+                def __call__(self, progress_value, desc=None):
+                    # progress_value от 0.0 до 1.0 соответствует шагам
+                    if progress_value == 0.0:
+                        self.current_step = 0
+                    elif progress_value <= 0.125:  # 1/8
+                        self.current_step = 1
+                    elif progress_value <= 0.25:   # 2/8
+                        self.current_step = 2
+                    elif progress_value <= 0.375:  # 3/8
+                        self.current_step = 3
+                    elif progress_value <= 0.5:    # 4/8
+                        self.current_step = 4
+                    elif progress_value <= 0.625:  # 5/8
+                        self.current_step = 5
+                    elif progress_value <= 0.75:   # 6/8
+                        self.current_step = 6
+                    elif progress_value <= 0.875:  # 7/8
+                        self.current_step = 7
+                    else:  # 1.0
+                        self.current_step = 8
+                        
+                    # Сохраняем прогресс в глобальную переменную для доступа из веб-интерфейса
+                    global current_conversion_progress
+                    current_conversion_progress = {
+                        'progress': progress_value,
+                        'current_step': self.current_step,
+                        'total_steps': self.total_steps,
+                        'step_name': self.step_names.get(self.current_step, "Обработка"),
+                        'description': desc or self.step_names.get(self.current_step, "Обработка")
+                    }
+            
+            progress_tracker = ProgressTracker()
             
             with memory_cleanup():
                 result = _rvc_infer(
@@ -122,7 +175,7 @@ class MushroomRVCAPI:
                     autotune=autotune,
                     autotune_strength=autotune_strength,
                     output_format=output_format,
-                    progress=DummyProgress()
+                    progress=progress_tracker
                 )
             
             return result

@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ i18n.title }}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/audio-player.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='audio-player.css') }}">
 </head>
 <body>
     <div class="container">
@@ -18,8 +18,10 @@
             <h1 class="title">🍄 {{ i18n.title }}</h1>
             <p class="subtitle">{{ 'Минималистичный интерфейс для преобразования голоса' if lang == 'ru' else 'Minimalist interface for voice conversion' }}</p>
             <div class="language-switcher">
-                <button class="lang-btn" data-lang="ru" title="Русский">🇷🇺</button>
-                <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+                <select id="language-select" class="language-dropdown">
+                    <option value="ru" {{ 'selected' if lang == 'ru' else '' }}>Русский</option>
+                    <option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option>
+                </select>
             </div>
         </header>
 
@@ -88,6 +90,12 @@
                                     <line x1="16" y1="17" x2="8" y2="17"/>
                                     <polyline points="10,9 9,9 8,9"/>
                                 </svg>
+                                <button type="button" id="remove-audio-file" class="remove-file-btn hidden" title="{{ 'Удалить файл' if lang == 'ru' else 'Remove file' }}">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
                             </label>
                         </div>
                         <!-- Прогресс-бар для загрузки аудио -->
@@ -159,6 +167,11 @@
                         <input type="range" id="index-rate" name="index_rate" class="slider" min="0" max="1" step="0.01" value="0.7">
                     </div>
 
+                    <div class="form-group">
+                        <label for="volume-envelope" class="label">{{ i18n.volume_envelope }}: <span id="volume-envelope-value">1.0</span></label>
+                        <input type="range" id="volume-envelope" name="volume_envelope" class="slider" min="0" max="1" step="0.01" value="1.0">
+                    </div>
+
                     <!-- Дополнительные настройки -->
                     <details class="details">
                         <summary class="details-summary">{{ i18n.advanced_settings }}</summary>
@@ -172,11 +185,6 @@
                                     <label for="f0-max" class="label">{{ i18n.f0_max }}</label>
                                     <input type="number" id="f0-max" name="f0_max" class="input" min="380" max="16000" value="1100">
                                 </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="volume-envelope" class="label">{{ i18n.volume_envelope }}: <span id="volume-envelope-value">1.0</span></label>
-                                <input type="range" id="volume-envelope" name="volume_envelope" class="slider" min="0" max="1" step="0.01" value="1.0">
                             </div>
 
                             <div class="checkbox-group">
@@ -515,7 +523,7 @@
         window.i18n = JSON.parse('{{ i18n | tojson | safe }}');
         window.currentLang = '{{ lang }}';
     </script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script src="{{ url_for('static', filename='audio-player.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/audio-player.js') }}"></script>
 </body>
 </html>

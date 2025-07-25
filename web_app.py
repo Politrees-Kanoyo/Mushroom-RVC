@@ -93,7 +93,7 @@ I18N = {
         'autotune_strength': 'Сила автотюна'
     },
     'en': {
-        'title': 'Mushroom RVC Web UI',
+        'title': 'Mushroom RVC WebUI',
         'voice_conversion': 'Inference',
         'text_to_speech': 'Text to Speech',
         'model_management': 'Model Management',
@@ -299,6 +299,47 @@ def api_upload_audio():
     except RequestEntityTooLarge:
         return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 500MB)'})
 
+@app.route('/api/remove-audio', methods=['POST'])
+def api_remove_audio():
+    """Endpoint для удаления загруженных аудиофайлов"""
+    try:
+        data = request.get_json()
+        file_path = data.get('file_path')
+        
+        if not file_path:
+            return jsonify({'success': False, 'error': 'Путь к файлу не указан'})
+        
+        if os.path.exists(file_path) and os.path.abspath(file_path).startswith(os.path.abspath(UPLOAD_FOLDER)):
+            os.remove(file_path)
+            return jsonify({'success': True, 'message': 'Файл успешно удален'})
+        else:
+            return jsonify({'success': False, 'error': 'Файл не найден или недоступен для удаления'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/conversion-progress')
+def get_conversion_progress():
+    """Endpoint для получения текущего прогресса конвертации"""
+    try:
+        from web.api import current_conversion_progress
+        return jsonify({
+            'success': True,
+            'progress': current_conversion_progress
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'progress': {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 8,
+                'step_name': 'Ошибка',
+                'description': 'Ошибка получения прогресса'
+            }
+        })
+
 @app.route('/api/voice-conversion', methods=['POST'])
 def api_voice_conversion():
     input_path = None
@@ -346,8 +387,7 @@ def api_voice_conversion():
             output_format=output_format
         )
         
-        cleanup_temp_file(input_path)
-        
+  
         return jsonify({
             'success': True,
             'output_path': output_path,
@@ -479,7 +519,6 @@ def api_install_hubert():
 @app.route('/download/<filename>')
 def download_file(filename):
     try:
-        # Поиск файла в папке вывода
         output_dir = 'output/RVC_output'
         file_path = os.path.join(output_dir, filename)
         
@@ -532,6 +571,8 @@ def bad_request(e):
     }), 400
 
 if __name__ == '__main__':
+    import logging
+    
     parser = argparse.ArgumentParser(description='Mushroom RVC Web UI')
     parser.add_argument('--cloudflared', action='store_true', help='Запустить с Cloudflared туннелем')
     parser.add_argument('--lang', choices=['ru', 'en'], default='ru', 
@@ -542,15 +583,14 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    if args.lang == 'ru':
-        print("🍄 Mushroom RVC Web UI запущен!")
-        print(f"📱 Откройте браузер и перейдите по адресу: http://localhost:{args.port}")
-        print("🎤 Готов к преобразованию голоса!")
-        print(f"🌐 Язык интерфейса: Русский")
-    else:
-        print("🍄 Mushroom RVC Web UI started!")
-        print(f"📱 Open your browser and go to: http://localhost:{args.port}")
-        print("🎤 Ready for voice conversion!")
-        print(f"🌐 Interface language: English")
+    if not args.debug:
+        werkzeug_logger = logging.getLogger('werkzeug')
+        werkzeug_logger.setLevel(logging.ERROR)
+        werkzeug_logger.disabled = True
+    
+    print(f"\n🌌 Mushroom RVC WebUI запущен!")
+    print(f"📡 Локальный адрес: http://localhost:{args.port}")
+    print(f"🔧 Режим отладки: {'включен' if args.debug else 'отключен'}")
+    print(f"\n💡 Для остановки сервера нажмите Ctrl+C\n")
     
     app.run(debug=args.debug, host=args.host, port=args.port)
