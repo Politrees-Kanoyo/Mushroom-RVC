@@ -37,7 +37,9 @@ if '--lang' in sys.argv:
             CURRENT_LANGUAGE = lang
 
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
-run_with_cloudflared(app)
+if '--cloudflared' in sys.argv:
+    run_with_cloudflared(app)
+    
 app.config['SECRET_KEY'] = 'mushroom-rvc-web-ui'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  
 
@@ -273,19 +275,45 @@ def get_hubert_models():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/voice-conversion', methods=['POST'])
-def api_voice_conversion():
-    input_path = None
+@app.route('/api/upload-audio', methods=['POST'])
+def api_upload_audio():
+    """Endpoint для загрузки аудиофайлов"""
     try:
         if 'audio_file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не найден'})
         
         file = request.files['audio_file']
         
-        # Используем новую функцию для безопасного сохранения файла
-        input_path, error_msg = save_uploaded_file(file, UPLOAD_FOLDER, ALLOWED_AUDIO_EXTENSIONS)
+        file_path, error_msg = save_uploaded_file(file, UPLOAD_FOLDER, ALLOWED_AUDIO_EXTENSIONS)
         if error_msg:
             return jsonify({'success': False, 'error': error_msg})
+        
+        return jsonify({
+            'success': True,
+            'file_path': file_path,
+            'filename': os.path.basename(file_path)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    except RequestEntityTooLarge:
+        return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 500MB)'})
+
+@app.route('/api/voice-conversion', methods=['POST'])
+def api_voice_conversion():
+    input_path = None
+    try:
+        if 'audio_file_path' in request.form:
+            input_path = request.form.get('audio_file_path')
+            if not os.path.exists(input_path):
+                return jsonify({'success': False, 'error': 'Загруженный файл не найден'})
+        elif 'audio_file' in request.files:
+            file = request.files['audio_file']
+            input_path, error_msg = save_uploaded_file(file, UPLOAD_FOLDER, ALLOWED_AUDIO_EXTENSIONS)
+            if error_msg:
+                return jsonify({'success': False, 'error': error_msg})
+        else:
+            return jsonify({'success': False, 'error': 'Файл не найден'})
         
         rvc_model = request.form.get('rvc_model')
         f0_method = request.form.get('f0_method', 'rmvpe+')
@@ -505,6 +533,7 @@ def bad_request(e):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mushroom RVC Web UI')
+    parser.add_argument('--cloudflared', action='store_true', help='Запустить с Cloudflared туннелем')
     parser.add_argument('--lang', choices=['ru', 'en'], default='ru', 
                        help='Язык интерфейса (ru/en) / Interface language (ru/en)')
     parser.add_argument('--port', type=int, default=5000, help='Порт для веб-сервера')

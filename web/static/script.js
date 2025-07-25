@@ -86,23 +86,100 @@ function setupSliders() {
     });
 }
 
+let uploadedAudioFile = null;
+
 function setupFileInputs() {
     const fileInputs = document.querySelectorAll('.file-input');
     
     fileInputs.forEach(input => {
-        input.addEventListener('change', function() {
+        input.addEventListener('change', async function() {
             const label = this.nextElementSibling;
             const textElement = label.querySelector('.file-text');
             
             if (this.files.length > 0) {
-                textElement.textContent = this.files[0].name;
+                const file = this.files[0];
+                textElement.textContent = file.name;
                 label.style.borderColor = 'var(--primary-color)';
+                
+                if (file.size > 500 * 1024 * 1024) {
+                    const errorMsg = currentLang === 'ru' ? 'Размер файла не должен превышать 500MB' : 'File size should not exceed 500MB';
+                    showNotification(errorMsg, 'error');
+                    this.value = '';
+                    textElement.textContent = i18n.select_audio_file || 'Выберите файл';
+                    label.style.borderColor = 'var(--border-color)';
+                    return;
+                }
+                
+                const fileInputWrapper = document.querySelector('.file-input-wrapper');
+                if (fileInputWrapper) {
+                    fileInputWrapper.style.display = 'none';
+                }
+                
+                await uploadAudioFile(file);
             } else {
                 textElement.textContent = i18n.select_audio_file || 'Выберите файл';
                 label.style.borderColor = 'var(--border-color)';
+                uploadedAudioFile = null;
             }
         });
     });
+}
+
+async function uploadAudioFile(file) {
+    const formData = new FormData();
+    formData.append('audio_file', file);
+    
+    showUploadProgress('voice-upload-progress', file);
+    
+    try {
+        const response = await uploadWithProgress('/api/upload-audio', formData, 'voice-upload-progress');
+        const data = await response.json();
+        
+        if (data.success) {
+            uploadedAudioFile = {
+                name: file.name,
+                path: data.file_path,
+                size: file.size
+            };
+            
+            hideUploadProgress('voice-upload-progress', 1000);
+            
+            const fileInputWrapper = document.querySelector('.file-input-wrapper');
+            if (fileInputWrapper) {
+                setTimeout(() => {
+                    fileInputWrapper.style.display = 'block';
+                    const textElement = fileInputWrapper.querySelector('.file-text');
+                    if (textElement) {
+                        textElement.textContent = `✓ ${file.name} (загружен)`;
+                    }
+                }, 1000);
+            }
+            
+            const successMsg = currentLang === 'ru' ? 'Файл успешно загружен!' : 'File uploaded successfully!';
+            showNotification(successMsg, 'success');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки файла:', error);
+        const errorMsg = currentLang === 'ru' ? 'Ошибка загрузки файла: ' + error.message : 'File upload error: ' + error.message;
+        showNotification(errorMsg, 'error');
+        
+        hideUploadProgress('voice-upload-progress', 1000);
+        
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        if (fileInputWrapper) {
+            setTimeout(() => {
+                fileInputWrapper.style.display = 'block';
+                const textElement = fileInputWrapper.querySelector('.file-text');
+                if (textElement) {
+                    textElement.textContent = i18n.select_audio_file || 'Выберите файл';
+                }
+            }, 1000);
+        }
+        
+        uploadedAudioFile = null;
+    }
 }
 
 function setupForms() {
@@ -387,17 +464,8 @@ function updateHubertSelect() {
 async function handleVoiceConversion(event) {
     event.preventDefault();
     
-    const formData = new FormData(event.target);
-    const audioFile = formData.get('audio_file');
-    
-    if (!audioFile || audioFile.size === 0) {
-        showNotification('Пожалуйста, выберите аудиофайл', 'error');
-        return;
-    }
-    
-    // Проверка размера файла (максимум 500MB)
-    if (audioFile.size > 500 * 1024 * 1024) {
-        const errorMsg = currentLang === 'ru' ? 'Файл слишком большой (максимум 500MB)' : 'File too large (max 500MB)';
+    if (!uploadedAudioFile) {
+        const errorMsg = currentLang === 'ru' ? 'Пожалуйста, сначала выберите и загрузите аудиофайл' : 'Please select and upload an audio file first';
         showNotification(errorMsg, 'error');
         return;
     }
@@ -406,6 +474,10 @@ async function handleVoiceConversion(event) {
         currentAudioPlayer.destroy();
         currentAudioPlayer = null;
     }
+    
+    const formData = new FormData(event.target);
+    
+    formData.set('audio_file_path', uploadedAudioFile.path);
     
     const autopitchChecked = document.getElementById('autopitch').checked;
     const autotuneChecked = document.getElementById('autotune').checked;
@@ -425,23 +497,17 @@ async function handleVoiceConversion(event) {
         formData.set('autotune_strength', '1.0');
     }
     
-    // Скрываем поле выбора файла и показываем прогресс-бар загрузки
-    const fileInputWrapper = document.querySelector('.file-input-wrapper');
-    if (fileInputWrapper) {
-        fileInputWrapper.style.display = 'none';
-    }
-    showUploadProgress('voice-upload-progress', audioFile);
+    showConversionProgress('voice-conversion-progress');
     
     try {
-        const response = await uploadWithProgress('/api/voice-conversion', formData, 'voice-upload-progress');
+        const response = await fetch('/api/voice-conversion', {
+            method: 'POST',
+            body: formData
+        });
+        
         const data = await response.json();
         
         if (data.success) {
-            // Скрываем прогресс загрузки и показываем прогресс конвертации
-            hideUploadProgress('voice-upload-progress');
-            showConversionProgress('voice-conversion-progress');
-            
-            // Симулируем прогресс конвертации
             await simulateConversionProgress('voice-conversion-progress');
             
             showResult({
@@ -452,13 +518,7 @@ async function handleVoiceConversion(event) {
             const successMsg = currentLang === 'ru' ? 'Преобразование голоса завершено!' : 'Voice conversion completed successfully!';
             showNotification(successMsg, 'success');
             
-            // Скрываем прогресс конвертации и показываем поле выбора файла обратно
             hideUploadProgress('voice-conversion-progress', 2000);
-            if (fileInputWrapper) {
-                setTimeout(() => {
-                    fileInputWrapper.style.display = 'block';
-                }, 2000);
-            }
         } else {
             throw new Error(data.error);
         }
@@ -466,15 +526,7 @@ async function handleVoiceConversion(event) {
         console.error('Ошибка преобразования:', error);
         const errorMsg = currentLang === 'ru' ? 'Ошибка преобразования: ' + error.message : 'Conversion error: ' + error.message;
         showNotification(errorMsg, 'error');
-        hideUploadProgress('voice-upload-progress', 1000);
         hideUploadProgress('voice-conversion-progress', 1000);
-        
-        // Показываем поле выбора файла обратно при ошибке
-        if (fileInputWrapper) {
-            setTimeout(() => {
-                fileInputWrapper.style.display = 'block';
-            }, 1000);
-        }
     }
 }
 
@@ -494,7 +546,6 @@ async function handleTTSConversion(event) {
     }
     
     try {
-        // Показываем прогресс синтеза
         showConversionProgress('tts-synthesis-progress');
         
         const response = await fetch('/api/tts-conversion', {
@@ -508,11 +559,9 @@ async function handleTTSConversion(event) {
         const data = await response.json();
         
         if (data.success) {
-            // Скрываем прогресс синтеза и показываем прогресс конвертации
             hideUploadProgress('tts-synthesis-progress');
             showConversionProgress('tts-conversion-progress');
             
-            // Симулируем прогресс конвертации
             await simulateConversionProgress('tts-conversion-progress');
             
             showResult({
@@ -524,7 +573,6 @@ async function handleTTSConversion(event) {
             const successMsg = currentLang === 'ru' ? 'Синтез и преобразование завершены!' : 'Synthesis and conversion completed successfully!';
             showNotification(successMsg, 'success');
             
-            // Скрываем прогресс конвертации
             hideUploadProgress('tts-conversion-progress', 2000);
         } else {
             throw new Error(data.error);
@@ -534,7 +582,6 @@ async function handleTTSConversion(event) {
         const errorMsg = currentLang === 'ru' ? 'Ошибка TTS преобразования: ' + error.message : 'TTS conversion error: ' + error.message;
         showNotification(errorMsg, 'error');
         
-        // Скрываем все прогресс-бары при ошибке
         hideUploadProgress('tts-synthesis-progress', 1000);
         hideUploadProgress('tts-conversion-progress', 1000);
     }
@@ -587,7 +634,6 @@ async function handleUploadZip(event) {
         return;
     }
     
-    // Проверка размера файла (максимум 500MB)
     if (modelFile.size > 500 * 1024 * 1024) {
         const errorMsg = currentLang === 'ru' ? 'Файл слишком большой (максимум 500MB)' : 'File too large (max 500MB)';
         showNotification(errorMsg, 'error');
@@ -600,7 +646,6 @@ async function handleUploadZip(event) {
         return;
     }
     
-    // Показать прогресс-бар загрузки
     showUploadProgress('zip-upload-progress', modelFile);
     
     try {
@@ -873,16 +918,8 @@ async function handleRefreshTtsModels() {
     }
 }
 
-// Глобальные переменные для отслеживания загрузок
 const activeUploads = new Map();
 
-/**
- * Функция для загрузки файлов с отслеживанием прогресса
- * @param {string} url - URL для загрузки
- * @param {FormData} formData - Данные формы
- * @param {string} progressId - ID элемента прогресс-бара
- * @returns {Promise<Response>} - Promise с ответом сервера
- */
 async function uploadWithProgress(url, formData, progressId) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -890,23 +927,20 @@ async function uploadWithProgress(url, formData, progressId) {
         let lastLoaded = 0;
         let lastTime = startTime;
         
-        // Сохраняем ссылку на XHR для возможности отмены
         activeUploads.set(progressId, xhr);
         
-        // Обработчик прогресса загрузки
         xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable) {
                 const currentTime = Date.now();
                 const percentComplete = Math.round((event.loaded / event.total) * 100);
                 
-                // Расчет скорости загрузки
-                const timeDiff = (currentTime - lastTime) / 1000; // в секундах
+
+                const timeDiff = (currentTime - lastTime) / 1000; 
                 const loadedDiff = event.loaded - lastLoaded;
-                const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0; // байт/сек
+                const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0; 
                 
-                // Расчет оставшегося времени
                 const remaining = event.total - event.loaded;
-                const eta = speed > 0 ? remaining / speed : 0; // секунды
+                const eta = speed > 0 ? remaining / speed : 0; 
                 
                 updateUploadProgress(progressId, percentComplete, 'uploading', {
                     speed: speed,
@@ -920,7 +954,6 @@ async function uploadWithProgress(url, formData, progressId) {
             }
         });
         
-        // Обработчик завершения загрузки
         xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 updateUploadProgress(progressId, 100, 'processing');
@@ -944,38 +977,29 @@ async function uploadWithProgress(url, formData, progressId) {
             }
         });
         
-        // Обработчик ошибок
         xhr.addEventListener('error', () => {
             updateUploadProgress(progressId, 0, 'error');
             activeUploads.delete(progressId);
             reject(new Error('Ошибка сети при загрузке файла'));
         });
         
-        // Обработчик отмены
         xhr.addEventListener('abort', () => {
             updateUploadProgress(progressId, 0, 'cancelled');
             activeUploads.delete(progressId);
             reject(new Error('Загрузка была отменена'));
         });
         
-        // Настройка и отправка запроса
         xhr.open('POST', url);
         xhr.send(formData);
     });
 }
 
-/**
- * Показать прогресс-бар загрузки
- * @param {string} progressId - ID элемента прогресс-бара
- * @param {File} file - Файл для загрузки (опционально)
- */
 function showUploadProgress(progressId, file = null) {
     const progressElement = document.getElementById(progressId);
     if (progressElement) {
         progressElement.classList.remove('hidden');
         progressElement.classList.add('active');
         
-        // Устанавливаем информацию о файле
         if (file) {
             const fileName = progressElement.querySelector('.progress-filename');
             const fileSize = progressElement.querySelector('.progress-filesize');
@@ -993,11 +1017,6 @@ function showUploadProgress(progressId, file = null) {
     }
 }
 
-/**
- * Скрыть прогресс-бар загрузки
- * @param {string} progressId - ID элемента прогресс-бара
- * @param {number} delay - Задержка перед скрытием в миллисекундах
- */
 function hideUploadProgress(progressId, delay = 0) {
     setTimeout(() => {
         const progressElement = document.getElementById(progressId);
@@ -1005,7 +1024,6 @@ function hideUploadProgress(progressId, delay = 0) {
             progressElement.classList.add('hidden');
             progressElement.classList.remove('active');
             
-            // Очищаем информацию о файле
             const fileName = progressElement.querySelector('.progress-filename');
             const fileSize = progressElement.querySelector('.progress-filesize');
             const progressSpeed = progressElement.querySelector('.progress-speed');
@@ -1018,19 +1036,11 @@ function hideUploadProgress(progressId, delay = 0) {
             if (progressEta) progressEta.textContent = '';
             if (progressSize) progressSize.textContent = '';
             
-            // Сброс прогресса
             updateUploadProgress(progressId, 0, 'preparing');
         }
     }, delay);
 }
 
-/**
- * Обновить прогресс загрузки
- * @param {string} progressId - ID элемента прогресс-бара
- * @param {number} percentage - Процент выполнения (0-100)
- * @param {string} status - Статус загрузки
- * @param {Object} details - Дополнительные детали (скорость, время и т.д.)
- */
 function updateUploadProgress(progressId, percentage, status = 'uploading', details = {}) {
     const progressElement = document.getElementById(progressId);
     if (!progressElement) return;
@@ -1046,10 +1056,8 @@ function updateUploadProgress(progressId, percentage, status = 'uploading', deta
     if (progressFill) {
         progressFill.style.width = `${percentage}%`;
         
-        // Добавляем анимацию для плавного изменения
         progressFill.style.transition = 'width 0.3s ease';
         
-        // Изменяем цвет в зависимости от статуса
         progressFill.className = `progress-fill ${status}`;
     }
     
@@ -1070,14 +1078,12 @@ function updateUploadProgress(progressId, percentage, status = 'uploading', deta
         progressStatus.textContent = statusTexts[status] || statusTexts['uploading'];
     }
     
-    // Обновляем скорость загрузки
     if (progressSpeed && details.speed !== undefined) {
         const speedText = formatSpeed(details.speed);
         progressSpeed.textContent = speedText;
         progressSpeed.style.display = status === 'uploading' ? 'inline' : 'none';
     }
     
-    // Обновляем оставшееся время
     if (progressEta && details.eta !== undefined && status === 'uploading') {
         const etaText = formatTime(details.eta);
         progressEta.textContent = etaText;
@@ -1086,14 +1092,12 @@ function updateUploadProgress(progressId, percentage, status = 'uploading', deta
         progressEta.style.display = 'none';
     }
     
-    // Обновляем размер файла
     if (progressSize && details.loaded !== undefined && details.total !== undefined) {
         const sizeText = `${formatFileSize(details.loaded)} / ${formatFileSize(details.total)}`;
         progressSize.textContent = sizeText;
         progressSize.style.display = status === 'uploading' ? 'inline' : 'none';
     }
     
-    // Управляем кнопкой отмены
     if (cancelButton) {
         if (status === 'uploading' || status === 'preparing') {
             cancelButton.style.display = 'inline-block';
@@ -1104,12 +1108,6 @@ function updateUploadProgress(progressId, percentage, status = 'uploading', deta
     }
 }
 
-/**
- * Улучшенная функция для проверки поддерживаемых типов файлов
- * @param {File} file - Файл для проверки
- * @param {Array} allowedTypes - Массив разрешенных расширений
- * @returns {boolean} - true если файл поддерживается
- */
 function isFileTypeSupported(file, allowedTypes) {
     if (!file || !file.name) return false;
     
@@ -1119,15 +1117,9 @@ function isFileTypeSupported(file, allowedTypes) {
     return allowedTypes.includes(fileExtension);
 }
 
-/**
- * Функция для валидации файлов перед загрузкой
- * @param {File} file - Файл для валидации
- * @param {Object} options - Опции валидации
- * @returns {Object} - Результат валидации
- */
 function validateFile(file, options = {}) {
     const {
-        maxSize = 500 * 1024 * 1024, // 500MB по умолчанию
+        maxSize = 500 * 1024 * 1024, 
         allowedTypes = [],
         minSize = 0
     } = options;
@@ -1143,7 +1135,6 @@ function validateFile(file, options = {}) {
         return result;
     }
     
-    // Проверка размера файла
     if (file.size > maxSize) {
         result.valid = false;
         const maxSizeMB = Math.round(maxSize / (1024 * 1024));
@@ -1163,7 +1154,6 @@ function validateFile(file, options = {}) {
         );
     }
     
-    // Проверка типа файла
     if (allowedTypes.length > 0 && !isFileTypeSupported(file, allowedTypes)) {
         result.valid = false;
         result.errors.push(
@@ -1175,11 +1165,6 @@ function validateFile(file, options = {}) {
     
     return result;
 }
-
-/**
- * Отмена загрузки
- * @param {string} progressId - ID элемента прогресс-бара
- */
 function cancelUpload(progressId) {
     const xhr = activeUploads.get(progressId);
     if (xhr) {
@@ -1192,11 +1177,6 @@ function cancelUpload(progressId) {
     }
 }
 
-/**
- * Форматирование скорости загрузки
- * @param {number} bytesPerSecond - Скорость в байтах в секунду
- * @returns {string} - Отформатированная строка скорости
- */
 function formatSpeed(bytesPerSecond) {
     if (bytesPerSecond === 0) return '0 B/s';
     
@@ -1207,11 +1187,6 @@ function formatSpeed(bytesPerSecond) {
     return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
 }
 
-/**
- * Форматирование времени
- * @param {number} seconds - Время в секундах
- * @returns {string} - Отформатированная строка времени
- */
 function formatTime(seconds) {
     if (seconds === 0 || !isFinite(seconds)) {
         return currentLang === 'ru' ? 'Вычисление...' : 'Calculating...';
@@ -1230,11 +1205,6 @@ function formatTime(seconds) {
     }
 }
 
-/**
- * Форматирование размера файла
- * @param {number} bytes - Размер в байтах
- * @returns {string} - Отформатированная строка размера
- */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
     
@@ -1245,58 +1215,48 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
 }
 
-/**
- * Показать прогресс-бар конвертации
- * @param {string} progressId - ID элемента прогресс-бара
- */
 function showConversionProgress(progressId) {
     const progressElement = document.getElementById(progressId);
     if (progressElement) {
         progressElement.classList.remove('hidden');
         progressElement.classList.add('active');
         
-        // Сброс прогресса
         updateUploadProgress(progressId, 0, 'processing');
     }
 }
 
-/**
- * Симуляция прогресса конвертации
- * @param {string} progressId - ID элемента прогресс-бара
- */
 async function simulateConversionProgress(progressId) {
+    const fileName = uploadedAudioFile ? uploadedAudioFile.name : 'audio_file';
+    const shortFileName = fileName.length > 30 ? fileName.substring(0, 30) + '...' : fileName;
+    
     const steps = [
-        { progress: 10, status: 'processing', text: currentLang === 'ru' ? 'Загрузка модели...' : 'Loading model...' },
-        { progress: 25, status: 'processing', text: currentLang === 'ru' ? 'Анализ аудио...' : 'Analyzing audio...' },
-        { progress: 40, status: 'processing', text: currentLang === 'ru' ? 'Извлечение признаков...' : 'Extracting features...' },
-        { progress: 60, status: 'processing', text: currentLang === 'ru' ? 'Преобразование голоса...' : 'Converting voice...' },
-        { progress: 80, status: 'processing', text: currentLang === 'ru' ? 'Применение эффектов...' : 'Applying effects...' },
-        { progress: 95, status: 'processing', text: currentLang === 'ru' ? 'Финализация...' : 'Finalizing...' },
-        { progress: 100, status: 'complete', text: currentLang === 'ru' ? 'Завершено!' : 'Completed!' }
+        { progress: 0, current: 0, total: 2, elapsed: 0, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+        { progress: 25, current: 0, total: 2, elapsed: 1, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+        { progress: 50, current: 1, total: 2, elapsed: 2, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+        { progress: 75, current: 1, total: 2, elapsed: 3, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+        { progress: 100, current: 2, total: 2, elapsed: 5, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' }
     ];
     
     for (const step of steps) {
-        updateUploadProgress(progressId, step.progress, step.status);
+        updateUploadProgress(progressId, step.progress, step.progress === 100 ? 'complete' : 'processing');
         
-        // Обновляем текст статуса
         const progressElement = document.getElementById(progressId);
         if (progressElement) {
             const statusText = progressElement.querySelector('.progress-status-text');
             if (statusText) {
-                statusText.textContent = step.text;
+                const remaining = step.total - step.current;
+                const timeRemaining = remaining > 0 ? `00:0${Math.max(0, 5 - step.elapsed)}` : '00:00';
+                const speed = step.elapsed > 0 ? (step.elapsed / Math.max(1, step.current)).toFixed(2) : '0.00';
+                
+                const statusMessage = `[🌌] ${step.text} — ${shortFileName}\nКонвертация: ${step.progress}% ${step.current}/${step.total} [00:0${step.elapsed}<${timeRemaining}, ${speed}s/steps]`;
+                statusText.textContent = statusMessage;
             }
         }
         
-        // Задержка между шагами
-        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
     }
 }
 
-/**
- * Улучшенная функция обработки ошибок сети
- * @param {Error} error - Объект ошибки
- * @returns {string} - Сообщение об ошибке для пользователя
- */
 function getNetworkErrorMessage(error) {
     if (!navigator.onLine) {
         return currentLang === 'ru' 
