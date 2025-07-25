@@ -9,6 +9,10 @@ import asyncio
 import argparse
 import tempfile
 import shutil
+import time
+import threading
+import subprocess
+import urllib.request
 from flask import Flask, render_template, request, jsonify, send_file, stream_template
 from flask_cloudflared import run_with_cloudflared
 from werkzeug.utils import secure_filename
@@ -214,6 +218,90 @@ def cleanup_temp_file(file_path):
             print(f"[DEBUG] Временный файл удален: {file_path}")
     except Exception as e:
         print(f"[WARNING] Не удалось удалить временный файл {file_path}: {e}")
+
+def setup_localtunnel(port=5000):
+    """Настройка и запуск локального туннеля через localtunnel"""
+    try:
+        print("Установка localtunnel...")
+        # Проверяем, установлен ли npm
+        try:
+            subprocess.run(['npm', '--version'], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Ошибка: npm не найден. Установите Node.js для использования localtunnel.")
+            return None
+        
+        # Устанавливаем localtunnel глобально
+        print("Устанавливаем localtunnel...")
+        install_result = subprocess.run(['npm', 'install', '-g', 'localtunnel'], 
+                                      capture_output=True, text=True)
+        if install_result.returncode != 0:
+            print(f"❌ Ошибка установки localtunnel: {install_result.stderr}")
+            return None
+        
+        print("Запуск localtunnel...")
+        
+        # Создаем файл для записи URL
+        url_file = 'url.txt'
+        with open(url_file, 'w') as file:
+            file.write('')
+        
+        # Запускаем localtunnel в фоновом режиме
+        def run_tunnel():
+            try:
+                with open(url_file, 'w') as file:
+                    process = subprocess.Popen(
+                        ['lt', '--port', str(port)],
+                        stdout=file,
+                        stderr=subprocess.STDOUT,
+                        text=True
+                    )
+                    # Ждем завершения процесса
+                    process.wait()
+            except Exception as e:
+                print(f"Ошибка запуска туннеля: {e}")
+        
+        # Запускаем туннель в отдельном потоке
+        tunnel_thread = threading.Thread(target=run_tunnel, daemon=True)
+        tunnel_thread.start()
+        
+        # Ждем немного для инициализации туннеля
+        time.sleep(5)
+        
+        try:
+            # Получаем внешний IP
+            endpoint_ip = urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip()
+            
+            # Читаем URL туннеля
+            tunnel_url = ""
+            if os.path.exists(url_file):
+                with open(url_file, 'r') as file:
+                    content = file.read()
+                    # Ищем URL в выводе localtunnel
+                    for line in content.split('\n'):
+                        if 'your url is:' in line:
+                            tunnel_url = line.replace('your url is:', '').strip()
+                            break
+                        elif 'https://' in line and 'loca.lt' in line:
+                            tunnel_url = line.strip()
+                            break
+            
+            if tunnel_url:
+                print(f"\n🌐 Локальный туннель запущен!")
+                print(f"🔗 Share Link: \033[93m{tunnel_url}\033[0m")
+                print(f"🔑 Password IP: {endpoint_ip}")
+                print(f"💡 Используйте IP адрес как пароль при первом подключении\n")
+                return tunnel_url
+            else:
+                print("❌ Не удалось получить URL туннеля")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Ошибка получения информации о туннеле: {e}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Ошибка настройки localtunnel: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -575,6 +663,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Mushroom RVC Web UI')
     parser.add_argument('--cloudflared', action='store_true', help='Запустить с Cloudflared туннелем')
+    parser.add_argument('--localtunnel', action='store_true', help='Запустить с локальным туннелем (localtunnel)')
     parser.add_argument('--lang', choices=['ru', 'en'], default='ru', 
                        help='Язык интерфейса (ru/en) / Interface language (ru/en)')
     parser.add_argument('--port', type=int, default=5000, help='Порт для веб-сервера')
@@ -588,8 +677,15 @@ if __name__ == '__main__':
         werkzeug_logger.setLevel(logging.ERROR)
         werkzeug_logger.disabled = True
     
+    # Настройка локального туннеля если указан флаг
+    tunnel_url = None
+    if args.localtunnel:
+        tunnel_url = setup_localtunnel(args.port)
+    
     print(f"\n🌌 Mushroom RVC WebUI запущен!")
     print(f"📡 Локальный адрес: http://localhost:{args.port}")
+    if tunnel_url:
+        print(f"🌐 Публичный адрес: {tunnel_url}")
     print(f"🔧 Режим отладки: {'включен' if args.debug else 'отключен'}")
     print(f"\n💡 Для остановки сервера нажмите Ctrl+C\n")
     
