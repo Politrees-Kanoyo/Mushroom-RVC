@@ -6,6 +6,7 @@ Werkzeug==2.3.7
 Jinja2==3.1.2
 click==8.1.7
 Flask==2.3.3
+flask-cloudflared
 requests
 numpy<2
 gradio

@@ -7,8 +7,12 @@ import os
 import sys
 import asyncio
 import argparse
-from flask import Flask, render_template, request, jsonify, send_file
+import tempfile
+import shutil
+from flask import Flask, render_template, request, jsonify, send_file, stream_template
+from flask_cloudflared import run_with_cloudflared
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 from web.api import (
     MushroomRVCAPI,
     voice_conversion,
@@ -33,6 +37,7 @@ if '--lang' in sys.argv:
             CURRENT_LANGUAGE = lang
 
 app = Flask(__name__, template_folder='web/templates', static_folder='web/static')
+run_with_cloudflared(app)
 app.config['SECRET_KEY'] = 'mushroom-rvc-web-ui'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  
 
@@ -148,6 +153,66 @@ def allowed_file(filename, allowed_extensions):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
+def validate_file_size(file, max_size_mb=500):
+    """Валидация размера файла"""
+    max_size_bytes = max_size_mb * 1024 * 1024
+    
+    # Получаем размер файла
+    file.seek(0, 2)  # Переходим в конец файла
+    file_size = file.tell()
+    file.seek(0)  # Возвращаемся в начало
+    
+    if file_size > max_size_bytes:
+        return False, f'Файл слишком большой. Максимальный размер: {max_size_mb}MB'
+    
+    if file_size == 0:
+        return False, 'Файл пустой'
+    
+    return True, None
+
+def save_uploaded_file(file, upload_folder, allowed_extensions):
+    """Безопасное сохранение загруженного файла с валидацией"""
+    try:
+        # Проверка наличия файла
+        if not file or file.filename == '':
+            return None, 'Файл не выбран'
+        
+        # Проверка расширения файла
+        if not allowed_file(file.filename, allowed_extensions):
+            return None, f'Неподдерживаемый формат файла. Разрешены: {", ".join(allowed_extensions)}'
+        
+        # Проверка размера файла
+        is_valid, error_msg = validate_file_size(file)
+        if not is_valid:
+            return None, error_msg
+        
+        # Создание безопасного имени файла
+        filename = secure_filename(file.filename)
+        if not filename:
+            return None, 'Недопустимое имя файла'
+        
+        # Создание уникального имени файла для избежания конфликтов
+        base_name, ext = os.path.splitext(filename)
+        unique_filename = f"{base_name}_{os.urandom(8).hex()}{ext}"
+        
+        # Сохранение файла
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        return file_path, None
+        
+    except Exception as e:
+        return None, f'Ошибка сохранения файла: {str(e)}'
+
+def cleanup_temp_file(file_path):
+    """Безопасное удаление временного файла"""
+    try:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[DEBUG] Временный файл удален: {file_path}")
+    except Exception as e:
+        print(f"[WARNING] Не удалось удалить временный файл {file_path}: {e}")
+
 @app.route('/')
 def index():
     return render_template('index.html', i18n=I18N[CURRENT_LANGUAGE], lang=CURRENT_LANGUAGE)
@@ -210,20 +275,17 @@ def get_hubert_models():
 
 @app.route('/api/voice-conversion', methods=['POST'])
 def api_voice_conversion():
+    input_path = None
     try:
         if 'audio_file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не найден'})
         
         file = request.files['audio_file']
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'Файл не выбран'})
         
-        if not allowed_file(file.filename, ALLOWED_AUDIO_EXTENSIONS):
-            return jsonify({'success': False, 'error': 'Неподдерживаемый формат файла'})
-        
-        filename = secure_filename(file.filename)
-        input_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(input_path)
+        # Используем новую функцию для безопасного сохранения файла
+        input_path, error_msg = save_uploaded_file(file, UPLOAD_FOLDER, ALLOWED_AUDIO_EXTENSIONS)
+        if error_msg:
+            return jsonify({'success': False, 'error': error_msg})
         
         rvc_model = request.form.get('rvc_model')
         f0_method = request.form.get('f0_method', 'rmvpe+')
@@ -256,7 +318,7 @@ def api_voice_conversion():
             output_format=output_format
         )
         
-        os.remove(input_path)
+        cleanup_temp_file(input_path)
         
         return jsonify({
             'success': True,
@@ -265,7 +327,12 @@ def api_voice_conversion():
         })
         
     except Exception as e:
+        # Очистка временного файла в случае ошибки
+        cleanup_temp_file(input_path)
         return jsonify({'success': False, 'error': str(e)})
+    except RequestEntityTooLarge:
+        cleanup_temp_file(input_path)
+        return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 500MB)'})
 
 @app.route('/api/tts-conversion', methods=['POST'])
 def api_tts_conversion():
@@ -323,57 +390,46 @@ def api_download_model():
 
 @app.route('/api/upload-model-zip', methods=['POST'])
 def api_upload_model_zip():
+    zip_path = None
     try:
         if 'model_file' not in request.files:
             return jsonify({'success': False, 'error': 'Файл не найден'})
         
         file = request.files['model_file']
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'Файл не выбран'})
-        
-        if not file.filename.lower().endswith('.zip'):
-            return jsonify({'success': False, 'error': 'Требуется ZIP файл'})
-        
         model_name = request.form.get('model_name')
+        
         if not model_name or model_name.strip() == '':
             return jsonify({'success': False, 'error': 'Имя модели не указано'})
         
-        filename = secure_filename(file.filename)
-        zip_path = os.path.join(UPLOAD_FOLDER, filename)
+        # Дополнительная проверка для ZIP файлов
+        if not file.filename.lower().endswith('.zip'):
+            return jsonify({'success': False, 'error': 'Требуется ZIP файл'})
         
-        try:
-            file.save(zip_path)
-            print(f"[DEBUG] Файл сохранен: {zip_path}, существует: {os.path.exists(zip_path)}")
-        except Exception as save_error:
-            print(f"[ERROR] Ошибка сохранения файла: {save_error}")
-            return jsonify({'success': False, 'error': f'Ошибка сохранения файла: {str(save_error)}'})
+        # Используем новую функцию для безопасного сохранения файла
+        zip_path, error_msg = save_uploaded_file(file, UPLOAD_FOLDER, {'zip'})
+        if error_msg:
+            return jsonify({'success': False, 'error': error_msg})
+        
+        print(f"[DEBUG] Файл сохранен: {zip_path}, существует: {os.path.exists(zip_path)}")
         try:
             print(f"[DEBUG] Начинаем загрузку модели из: {zip_path}")
             result = upload_model_zip(zip_path=zip_path, model_name=model_name)
             print(f"[DEBUG] Загрузка завершена успешно: {result}")
             
-            if os.path.exists(zip_path):
-                try:
-                    os.remove(zip_path)
-                    print(f"[DEBUG] Временный файл удален: {zip_path}")
-                except Exception as remove_error:
-                    print(f"[WARNING] Не удалось удалить временный файл: {remove_error}")
+            cleanup_temp_file(zip_path)
             
             return jsonify({'success': True, 'message': result})
         except Exception as upload_error:
             print(f"[ERROR] Ошибка загрузки модели: {upload_error}")
-            
-            if os.path.exists(zip_path):
-                try:
-                    os.remove(zip_path)
-                    print(f"[DEBUG] Временный файл удален после ошибки: {zip_path}")
-                except Exception as remove_error:
-                    print(f"[WARNING] Не удалось удалить временный файл после ошибки: {remove_error}")
-            
+            cleanup_temp_file(zip_path)
             return jsonify({'success': False, 'error': str(upload_error)})
         
     except Exception as e:
+        cleanup_temp_file(zip_path)
         return jsonify({'success': False, 'error': str(e)})
+    except RequestEntityTooLarge:
+        cleanup_temp_file(zip_path)
+        return jsonify({'success': False, 'error': 'Файл слишком большой (максимум 500MB)'})
 
 @app.route('/api/install-hubert', methods=['POST'])
 def api_install_hubert():
@@ -409,15 +465,43 @@ def download_file(filename):
 
 @app.errorhandler(413)
 def too_large(e):
-    return jsonify({'success': False, 'error': 'Файл слишком большой'}), 413
+    return jsonify({
+        'success': False, 
+        'error': 'Файл слишком большой (максимум 500MB)',
+        'error_code': 'FILE_TOO_LARGE'
+    }), 413
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(e):
+    return jsonify({
+        'success': False,
+        'error': 'Файл слишком большой (максимум 500MB)',
+        'error_code': 'FILE_TOO_LARGE'
+    }), 413
 
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({'error': 'Страница не найдена'}), 404
+    return jsonify({
+        'success': False, 
+        'error': 'Страница не найдена',
+        'error_code': 'NOT_FOUND'
+    }), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+    return jsonify({
+        'success': False, 
+        'error': 'Внутренняя ошибка сервера',
+        'error_code': 'INTERNAL_ERROR'
+    }), 500
+
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify({
+        'success': False,
+        'error': 'Неверный запрос',
+        'error_code': 'BAD_REQUEST'
+    }), 400
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mushroom RVC Web UI')

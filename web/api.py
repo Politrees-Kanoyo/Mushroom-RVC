@@ -3,7 +3,11 @@
 import asyncio
 import os
 import sys
+import gc
+import tempfile
+import shutil
 from typing import Optional, Tuple, Dict, Any, List
+from contextlib import contextmanager
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -37,6 +41,34 @@ from web.gradio.components.modules import (
     OUTPUT_FORMAT
 )
 
+@contextmanager
+def memory_cleanup():
+    """Контекстный менеджер для очистки памяти после операций"""
+    try:
+        yield
+    finally:
+        gc.collect()
+
+def validate_file_exists(file_path: str) -> bool:
+    """Проверка существования файла"""
+    return os.path.exists(file_path) and os.path.isfile(file_path)
+
+def get_file_size_mb(file_path: str) -> float:
+    """Получение размера файла в мегабайтах"""
+    if not validate_file_exists(file_path):
+        return 0.0
+    return os.path.getsize(file_path) / (1024 * 1024)
+
+def safe_remove_file(file_path: str) -> bool:
+    """Безопасное удаление файла"""
+    try:
+        if validate_file_exists(file_path):
+            os.remove(file_path)
+            return True
+    except Exception as e:
+        print(f"[WARNING] Не удалось удалить файл {file_path}: {e}")
+    return False
+
 
 class MushroomRVCAPI: 
     def __init__(self):
@@ -61,27 +93,37 @@ class MushroomRVCAPI:
         output_format: str = "wav"
     ) -> str:
         try:
+            # Проверка существования входного файла
+            if not validate_file_exists(input_path):
+                raise Exception(f"Входной файл не найден: {input_path}")
+            
+            # Проверка размера файла
+            file_size = get_file_size_mb(input_path)
+            if file_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер файла ({file_size:.1f} MB) превышает лимит 500 MB")
+            
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
             
-            result = _rvc_infer(
-                rvc_model=rvc_model,
-                input_path=input_path,
-                f0_method=f0_method,
-                f0_min=f0_min,
-                f0_max=f0_max,
-                rvc_pitch=rvc_pitch,
-                protect=protect,
-                index_rate=index_rate,
-                volume_envelope=volume_envelope,
-                autopitch=autopitch,
-                autopitch_threshold=autopitch_threshold,
-                autotune=autotune,
-                autotune_strength=autotune_strength,
-                output_format=output_format,
-                progress=DummyProgress()
-            )
+            with memory_cleanup():
+                result = _rvc_infer(
+                    rvc_model=rvc_model,
+                    input_path=input_path,
+                    f0_method=f0_method,
+                    f0_min=f0_min,
+                    f0_max=f0_max,
+                    rvc_pitch=rvc_pitch,
+                    protect=protect,
+                    index_rate=index_rate,
+                    volume_envelope=volume_envelope,
+                    autopitch=autopitch,
+                    autopitch_threshold=autopitch_threshold,
+                    autotune=autotune,
+                    autotune_strength=autotune_strength,
+                    output_format=output_format,
+                    progress=DummyProgress()
+                )
             
             return result
             
@@ -110,31 +152,36 @@ class MushroomRVCAPI:
         tts_pitch: int = 0
     ) -> Tuple[str, str]:
         try:
+            # Проверка длины текста
+            if len(tts_text) > 10000:  # Лимит на длину текста
+                raise Exception(f"Текст слишком длинный ({len(tts_text)} символов). Максимум: 10000 символов")
+            
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
             
-            synth_path, converted_path = _rvc_edgetts_infer(
-                rvc_model=rvc_model,
-                f0_method=f0_method,
-                f0_min=f0_min,
-                f0_max=f0_max,
-                rvc_pitch=rvc_pitch,
-                protect=protect,
-                index_rate=index_rate,
-                volume_envelope=volume_envelope,
-                autopitch=autopitch,
-                autopitch_threshold=autopitch_threshold,
-                autotune=autotune,
-                autotune_strength=autotune_strength,
-                output_format=output_format,
-                tts_voice=tts_voice,
-                tts_text=tts_text,
-                tts_rate=tts_rate,
-                tts_volume=tts_volume,
-                tts_pitch=tts_pitch,
-                progress=DummyProgress()
-            )
+            with memory_cleanup():
+                synth_path, converted_path = _rvc_edgetts_infer(
+                    rvc_model=rvc_model,
+                    f0_method=f0_method,
+                    f0_min=f0_min,
+                    f0_max=f0_max,
+                    rvc_pitch=rvc_pitch,
+                    protect=protect,
+                    index_rate=index_rate,
+                    volume_envelope=volume_envelope,
+                    autopitch=autopitch,
+                    autopitch_threshold=autopitch_threshold,
+                    autotune=autotune,
+                    autotune_strength=autotune_strength,
+                    output_format=output_format,
+                    tts_voice=tts_voice,
+                    tts_text=tts_text,
+                    tts_rate=tts_rate,
+                    tts_volume=tts_volume,
+                    tts_pitch=tts_pitch,
+                    progress=DummyProgress()
+                )
             
             return synth_path, converted_path
             
@@ -161,6 +208,19 @@ class MushroomRVCAPI:
         model_name: str
     ) -> str:
         try:
+            # Проверка существования ZIP файла
+            if not validate_file_exists(zip_path):
+                raise Exception(f"ZIP файл не найден: {zip_path}")
+            
+            # Проверка размера файла
+            file_size = get_file_size_mb(zip_path)
+            if file_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер ZIP файла ({file_size:.1f} MB) превышает лимит 500 MB")
+            
+            # Проверка расширения файла
+            if not zip_path.lower().endswith('.zip'):
+                raise Exception("Файл должен иметь расширение .zip")
+            
             try:
                 from gradio import Error as GradioError
             except ImportError:
@@ -174,7 +234,8 @@ class MushroomRVCAPI:
                 def __init__(self, path):
                     self.name = path
             
-            result = _upload_zip_file(FileWrapper(zip_path), model_name, DummyProgress())
+            with memory_cleanup():
+                result = _upload_zip_file(FileWrapper(zip_path), model_name, DummyProgress())
             
             return result
 
@@ -191,6 +252,31 @@ class MushroomRVCAPI:
         model_name: str
     ) -> str:
         try:
+            # Проверка существования PTH файла
+            if not validate_file_exists(pth_path):
+                raise Exception(f"PTH файл не найден: {pth_path}")
+            
+            # Проверка размера PTH файла
+            pth_size = get_file_size_mb(pth_path)
+            if pth_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер PTH файла ({pth_size:.1f} MB) превышает лимит 500 MB")
+            
+            # Проверка расширения PTH файла
+            if not pth_path.lower().endswith('.pth'):
+                raise Exception("PTH файл должен иметь расширение .pth")
+            
+            # Проверка INDEX файла (если предоставлен)
+            if index_path:
+                if not validate_file_exists(index_path):
+                    raise Exception(f"INDEX файл не найден: {index_path}")
+                
+                index_size = get_file_size_mb(index_path)
+                if index_size > 100:  # 100 MB лимит для index файлов
+                    raise Exception(f"Размер INDEX файла ({index_size:.1f} MB) превышает лимит 100 MB")
+                
+                if not index_path.lower().endswith('.index'):
+                    raise Exception("INDEX файл должен иметь расширение .index")
+            
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
@@ -202,7 +288,10 @@ class MushroomRVCAPI:
             pth_file = FileWrapper(pth_path)
             index_file = FileWrapper(index_path) if index_path else None
             
-            return _upload_separate_files(pth_file, index_file, model_name, DummyProgress())
+            with memory_cleanup():
+                result = _upload_separate_files(pth_file, index_file, model_name, DummyProgress())
+            
+            return result
         except Exception as e:
             raise Exception(f"Ошибка при загрузке файлов модели: {str(e)}")
     
