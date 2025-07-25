@@ -1,6 +1,8 @@
 <div align="center">
 
 # Mushroom-RVC
+[![Open In Colab](https://img.shields.io/badge/Colab-Open_Notebook-blue?logo=google-colab)](https://colab.research.google.com/github/Politrees-Kanoyo/Mushroom-RVC/blob/main/assets/notebook/Mushroom_RVC_Colab.ipynb)
+[![Open In Kaggle](https://img.shields.io/badge/Kaggle-Open_Notebook-blue?logo=kaggle)](https://www.kaggle.com/code/politrees/mushroom-rvc-by-player1444)
 
 ### Contributed to the project:
 <a href="https://github.com/Politrees-Kanoyo/Mushroom-RVC/graphs/contributors" target="_blank">
