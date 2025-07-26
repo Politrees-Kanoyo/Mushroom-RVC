@@ -8,7 +8,8 @@
     "lr_decay": 0.999875,
     "segment_size": 17280,
     "c_mel": 45,
-    "c_kl": 1.0
+    "c_kl": 1.0,
+    "optimizer": "AdamW"
   },
   "data": {
     "max_wav_value": 32768.0,

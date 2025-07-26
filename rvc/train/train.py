@@ -33,7 +33,7 @@ from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.train.losses import discriminator_loss, feature_loss, generator_loss, kl_loss
 from rvc.train.mel_processing import MultiScaleMelSpectrogramLoss, mel_spectrogram_torch, spec_to_mel_torch, plot_spectrogram_to_numpy, mel_spectrogram_similarity
 from rvc.train.utils.data_utils import DistributedBucketSampler, TextAudioCollateMultiNSFsid, TextAudioLoaderMultiNSFsid
-from rvc.train.utils.train_utils import HParams, attempt_load_checkpoint_pair, save_checkpoint, extract_model
+from rvc.train.utils.train_utils import HParams, attempt_load_checkpoint_pair, save_checkpoint, extract_model, optimizer_class
 
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
@@ -41,7 +41,7 @@ torch.backends.cudnn.benchmark = True
 global_step = 0
 
 
-def generate_config(config_save_path, sample_rate, vocoder):
+def generate_config(config_save_path, sample_rate, vocoder, optimizer):
     config_path = os.path.join("rvc", "train", "configs", f"{sample_rate}.json")
     import pathlib
     if not pathlib.Path(config_save_path).exists():
@@ -49,23 +49,25 @@ def generate_config(config_save_path, sample_rate, vocoder):
             with open(config_path, "r", encoding="utf-8") as config_file:
                 config_data = json.load(config_file)
                 config_data["model"]["vocoder"] = vocoder
+                config_data["train"]["optimizer"] = optimizer
                 json.dump(config_data, f, ensure_ascii=False, indent=2)
 
 
 def get_hparams():
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment_dir", type=str, required=True)
-    parser.add_argument("--model_name", type=str, default="Model")
-    parser.add_argument("--total_epoch", type=int, default=300)
-    parser.add_argument("--save_every_epoch", type=int, default=25)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--sample_rate", type=int, default=40000)
-    parser.add_argument("--vocoder", type=str, default="HiFi-GAN")
-    parser.add_argument("--pretrain_g", type=str, default="")
-    parser.add_argument("--pretrain_d", type=str, default="")
+    parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--total_epoch", type=int, choices=range(1, 10001), default=300)
+    parser.add_argument("--save_every_epoch", type=int, choices=range(1, 101), default=25)
+    parser.add_argument("--batch_size", type=int, choices=range(1, 51), default=8)
+    parser.add_argument("--sample_rate", type=int, choices=[32000, 40000, 48000], default=40000)
+    parser.add_argument("--vocoder", type=str, choices=["HiFi-GAN", "MRF HiFi-GAN", "RefineGAN"], default="HiFi-GAN")
+    parser.add_argument("--optimizer", type=str, choices=["AdamW", "RAdam", "AdamP", "DiffGrad", "AdaBelief"], default="AdamW")
+    parser.add_argument("--pretrain_g", type=str, default=None)
+    parser.add_argument("--pretrain_d", type=str, default=None)
     parser.add_argument("--gpus", type=str, default="0")
-    parser.add_argument("--save_to_zip", type=lambda x: bool(strtobool(x)), default=False)
-    parser.add_argument("--save_backup", type=lambda x: bool(strtobool(x)), default=False)
+    parser.add_argument("--save_to_zip", type=lambda x: bool(strtobool(x)), choices=[True, False], default=False)
+    parser.add_argument("--save_backup", type=lambda x: bool(strtobool(x)), choices=[True, False], default=False)
     args = parser.parse_args()
 
     experiment_dir = os.path.join(args.experiment_dir, args.model_name)
@@ -73,7 +75,7 @@ def get_hparams():
 
     # Генерация файла конфигурации
     if not os.path.exists(config_save_path):
-        generate_config(config_save_path, args.sample_rate, args.vocoder)
+        generate_config(config_save_path, args.sample_rate, args.vocoder, args.optimizer)
 
     # Загрузка файла конфигурации
     with open(config_save_path, "r", encoding="utf-8") as f:
@@ -193,15 +195,11 @@ def run(hps, rank, n_gpus, device, device_id, global_step):
             net_g = net_g.to(device)
             net_d = net_d.to(device)
 
-        optim_g = torch.optim.AdamW(
-            net_g.parameters(),
-            hps.train.learning_rate,
-            betas=hps.train.betas,
-            eps=hps.train.eps,
-        )
-        optim_d = torch.optim.AdamW(
-            net_d.parameters(),
-            hps.train.learning_rate,
+        optim_g, optim_d = optimizer_class(
+            optimizer=hps.train.optimizer,
+            params_g=net_g.parameters(),
+            params_d=net_d.parameters(),
+            lr=hps.train.learning_rate,
             betas=hps.train.betas,
             eps=hps.train.eps,
         )

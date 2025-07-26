@@ -4,6 +4,7 @@ import traceback
 from collections import OrderedDict
 
 import torch
+import torch_optimizer as torch_optim
 
 
 def replace_keys_in_dict(d, old_key_part, new_key_part):
@@ -137,6 +138,26 @@ def extract_model(hps, ckpt, epoch, step, final_save):
         return f"Модель '{filename}' успешно сохранена!"
     except Exception:
         return f"Ошибка при сохранении модели: {traceback.format_exc()}"
+
+
+def optimizer_class(optimizer, params_g, params_d, lr, betas, eps):
+    # torch.optim
+    if optimizer == "AdamW":
+        optim_class = torch.optim.AdamW
+    elif optimizer == "RAdam":
+        optim_class = torch.optim.RAdam
+    # torch_optimizer
+    elif optimizer == "AdamP":
+        optim_class = torch_optim.AdamP
+    elif optimizer == "DiffGrad":
+        optim_class = torch_optim.DiffGrad
+    elif optimizer == "AdaBelief":
+        optim_class = torch_optim.AdaBelief
+
+    optim_g = optim_class(params=params_g, lr=lr, betas=betas, eps=eps)
+    optim_d = optim_class(params=params_d, lr=lr, betas=betas, eps=eps)
+
+    return optim_g, optim_d
 
 
 class HParams:

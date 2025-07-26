@@ -30,6 +30,7 @@ torchaudio==2.7.1
 torchvision==0.22.1
 faiss-cpu==1.7.3
 local-attention
+torch_optimizer
 tensorboardX
 tensorboard
 
