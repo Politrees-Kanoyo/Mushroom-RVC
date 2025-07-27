@@ -109,7 +109,6 @@ class EpochRecorder:
 
 def main():
     hps = get_hparams()
-    global_step = 0
 
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = str(randint(20000, 55555))
@@ -128,7 +127,7 @@ def main():
     for rank, device_id in enumerate(gpus):
         subproc = mp.Process(
             target=run,
-            args=(hps, rank, n_gpus, device, device_id, global_step),
+            args=(hps, rank, n_gpus, device, device_id),
         )
         children.append(subproc)
         subproc.start()
@@ -139,7 +138,7 @@ def main():
     sys.exit(0)
 
 
-def run(hps, rank, n_gpus, device, device_id, global_step):
+def run(hps, rank, n_gpus, device, device_id):
     global global_step
     try:
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval")) if rank == 0 else None
@@ -254,7 +253,6 @@ def run(hps, rank, n_gpus, device, device_id, global_step):
                 hps,
                 rank,
                 epoch,
-                global_step,
                 [net_g, net_d],
                 [optim_g, optim_d],
                 train_loader,
@@ -270,7 +268,7 @@ def run(hps, rank, n_gpus, device, device_id, global_step):
             dist.destroy_process_group()
 
 
-def train_and_evaluate(hps, rank, epoch, global_step, nets, optims, train_loader, writer_eval, fn_mel_loss, device):
+def train_and_evaluate(hps, rank, epoch, nets, optims, train_loader, writer_eval, fn_mel_loss, device):
     global global_step
 
     net_g, net_d = nets
