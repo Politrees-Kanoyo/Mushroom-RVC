@@ -1,1530 +1,1299 @@
-let currentModels = [];
-let currentVoices = {};
-let currentFormats = [];
-let currentF0Methods = [];
-let currentHubertModels = [];
-let i18n = window.i18n || {};
-let currentLang = window.currentLang || 'ru';
-let currentAudioPlayer = null;
-let voiceConversionPlayer = null;
-let ttsConversionPlayer = null;
+// Mushroom RVC Web Interface - Refactored
+// Модульная архитектура с улучшенной читаемостью и производительностью
 
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
+// === КОНСТАНТЫ И КОНФИГУРАЦИЯ ===
+const CONFIG = {
+    MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+    PROGRESS_UPDATE_INTERVAL: 500,
+    NOTIFICATION_TIMEOUT: 5000,
+    ANIMATION_DELAY: 300,
+    SUPPORTED_AUDIO_TYPES: ['mp3', 'wav', 'flac', 'ogg', 'm4a'],
+    SUPPORTED_ZIP_TYPES: ['zip']
+};
 
-function initializeApp() {
-    setupTabNavigation();
-    setupSliders();
-    setupFileInputs();
-    setupForms();
-    initializeLanguageSwitcher();
-    loadInitialData();
+const MESSAGES = {
+    ru: {
+        fileUploadSuccess: 'Файл успешно загружен!',
+        fileRemoved: 'Файл удален',
+        voiceConversionComplete: 'Преобразование голоса завершено!',
+        ttsConversionComplete: 'Синтез и преобразование завершены!',
+        modelDownloadSuccess: 'Модель успешно загружена!',
+        zipUploadSuccess: 'ZIP модель успешно загружена!',
+        hubertInstallSuccess: 'HuBERT модель успешно установлена!',
+        modelsListUpdated: 'Список моделей обновлен',
+        uploadCancelled: 'Загрузка отменена',
+        selectAudioFile: 'Выберите файл',
+        selectZipFile: 'Выберите ZIP файл',
+        fileTooLarge: 'Размер файла не должен превышать 500MB',
+        selectAudioFirst: 'Пожалуйста, сначала выберите и загрузите аудиофайл',
+        enterModelName: 'Пожалуйста, введите имя модели',
+        selectZipFirst: 'Пожалуйста, выберите ZIP файл',
+        networkError: 'Ошибка сети. Проверьте подключение к интернету.',
+        unknownError: 'Произошла неизвестная ошибка'
+    },
+    en: {
+        fileUploadSuccess: 'File uploaded successfully!',
+        fileRemoved: 'File removed',
+        voiceConversionComplete: 'Voice conversion completed successfully!',
+        ttsConversionComplete: 'Synthesis and conversion completed successfully!',
+        modelDownloadSuccess: 'Model downloaded successfully!',
+        zipUploadSuccess: 'ZIP model uploaded successfully!',
+        hubertInstallSuccess: 'HuBERT model installed successfully!',
+        modelsListUpdated: 'Models list updated',
+        uploadCancelled: 'Upload cancelled',
+        selectAudioFile: 'Select audio file',
+        selectZipFile: 'Select ZIP file',
+        fileTooLarge: 'File size should not exceed 500MB',
+        selectAudioFirst: 'Please select and upload an audio file first',
+        enterModelName: 'Please enter model name',
+        selectZipFirst: 'Please select ZIP file',
+        networkError: 'Network error. Check your internet connection.',
+        unknownError: 'An unknown error occurred'
+    }
+};
+
+// === СОСТОЯНИЕ ПРИЛОЖЕНИЯ ===
+class AppState {
+    constructor() {
+        this.models = [];
+        this.voices = {};
+        this.formats = [];
+        this.f0Methods = [];
+        this.hubertModels = [];
+        this.uploadedAudioFile = null;
+        this.currentAudioPlayer = null;
+        this.voiceConversionPlayer = null;
+        this.ttsConversionPlayer = null;
+        this.activeUploads = new Map();
+        this.i18n = window.i18n || {};
+        this.currentLang = window.currentLang || 'ru';
+    }
+
+    getMessage(key) {
+        return MESSAGES[this.currentLang]?.[key] || MESSAGES.en[key] || key;
+    }
 }
 
-function setupTabNavigation() {
-    const navButtons = document.querySelectorAll('.nav-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
-            
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            
-            const resultAreas = document.querySelectorAll('.result-area');
-            resultAreas.forEach(area => area.classList.add('hidden'));
-            
-            button.classList.add('active');
-            document.getElementById(targetTab).classList.add('active');
-            
-            if (targetTab === 'voice-conversion') {
-                const voiceResult = document.getElementById('voice-conversion-result');
-                if (voiceResult && voiceResult.querySelector('.result-content').innerHTML.trim() !== '') {
-                    voiceResult.classList.remove('hidden');
-                }
-                if (voiceConversionPlayer) {
-                    currentAudioPlayer = voiceConversionPlayer;
-                }
-            } else if (targetTab === 'tts-conversion') {
-                const ttsResult = document.getElementById('tts-conversion-result');
-                if (ttsResult && ttsResult.querySelector('.result-content').innerHTML.trim() !== '') {
-                    ttsResult.classList.remove('hidden');
-                }
-                if (ttsConversionPlayer) {
-                    currentAudioPlayer = ttsConversionPlayer;
-                }
-            }
-        });
-    });
-}
+const appState = new AppState();
 
-function setupSliders() {
-    const sliders = [
-        { id: 'rvc-pitch', valueId: 'rvc-pitch-value' },
-        { id: 'protect', valueId: 'protect-value' },
-        { id: 'index-rate', valueId: 'index-rate-value' },
-        { id: 'volume-envelope', valueId: 'volume-envelope-value' },
-        { id: 'tts-rate', valueId: 'tts-rate-value' },
-        { id: 'tts-volume', valueId: 'tts-volume-value' },
-        { id: 'tts-rvc-pitch', valueId: 'tts-rvc-pitch-value' },
-        { id: 'tts-protect', valueId: 'tts-protect-value' }
-    ];
-    
-    sliders.forEach(slider => {
-        const element = document.getElementById(slider.id);
-        const valueElement = document.getElementById(slider.valueId);
-        
-        if (element && valueElement) {
-            valueElement.textContent = element.value;
-            
-            element.addEventListener('input', () => {
-                valueElement.textContent = element.value;
-            });
+// === УТИЛИТЫ ===
+class Utils {
+    static formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const k = 1024;
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
+    }
+
+    static formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond === 0) return '0 B/s';
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        const k = 1024;
+        const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+        return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
+    }
+
+    static formatTime(seconds) {
+        if (seconds === 0 || !isFinite(seconds)) {
+            return appState.getMessage('calculating') || 'Calculating...';
         }
-    });
-}
-
-let uploadedAudioFile = null;
-
-function setupFileInputs() {
-    const audioFileInput = document.getElementById('audio-file');
-    const removeAudioBtn = document.getElementById('remove-audio-file');
-    
-    if (audioFileInput) {
-        audioFileInput.addEventListener('change', async function() {
-            const label = this.nextElementSibling;
-            const textElement = label.querySelector('.file-text');
-            
-            if (this.files.length > 0) {
-                const file = this.files[0];
-                textElement.textContent = file.name;
-                label.style.borderColor = 'var(--primary-color)';
-                
-                if (file.size > 500 * 1024 * 1024) {
-                    const errorMsg = currentLang === 'ru' ? 'Размер файла не должен превышать 500MB' : 'File size should not exceed 500MB';
-                    showNotification(errorMsg, 'error');
-                    this.value = '';
-                    textElement.textContent = i18n.select_audio_file || 'Выберите файл';
-                    label.style.borderColor = 'var(--border-color)';
-                    return;
-                }
-                
-                const fileInputWrapper = document.querySelector('.file-input-wrapper');
-                if (fileInputWrapper) {
-                    fileInputWrapper.style.display = 'none';
-                }
-                
-                await uploadAudioFile(file);
-            } else {
-                textElement.textContent = i18n.select_audio_file || 'Выберите файл';
-                label.style.borderColor = 'var(--border-color)';
-                uploadedAudioFile = null;
-                if (removeAudioBtn) {
-                    removeAudioBtn.classList.add('hidden');
-                }
-            }
-        });
-    }
-    
-    if (removeAudioBtn) {
-        removeAudioBtn.addEventListener('click', async function() {
-            await removeUploadedAudioFile();
-        });
-    }
-    
-    const zipFileInput = document.getElementById('zip-file');
-    if (zipFileInput) {
-        zipFileInput.addEventListener('change', function() {
-            const label = this.nextElementSibling;
-            const textElement = label.querySelector('.file-text');
-            
-            if (this.files.length > 0) {
-                const file = this.files[0];
-                textElement.textContent = file.name;
-                label.style.borderColor = 'var(--primary-color)';
-                
-                if (file.size > 500 * 1024 * 1024) {
-                    const errorMsg = currentLang === 'ru' ? 'Размер файла не должен превышать 500MB' : 'File size should not exceed 500MB';
-                    showNotification(errorMsg, 'error');
-                    this.value = '';
-                    textElement.textContent = i18n.select_zip_file || 'Выберите ZIP файл';
-                    label.style.borderColor = 'var(--border-color)';
-                    return;
-                }
-            } else {
-                textElement.textContent = i18n.select_zip_file || 'Выберите ZIP файл';
-                label.style.borderColor = 'var(--border-color)';
-            }
-        });
-    }
-}
-
-async function uploadAudioFile(file) {
-    const formData = new FormData();
-    formData.append('audio_file', file);
-    
-    showUploadProgress('voice-upload-progress', file);
-    
-    try {
-        const response = await uploadWithProgress('/api/upload-audio', formData, 'voice-upload-progress');
-        const data = await response.json();
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
         
-        if (data.success) {
-            uploadedAudioFile = {
-                name: file.name,
-                path: data.file_path,
-                size: file.size
-            };
-            
-            hideUploadProgress('voice-upload-progress', 1000);
-            
-            const fileInputWrapper = document.querySelector('.file-input-wrapper');
-            if (fileInputWrapper) {
-                setTimeout(() => {
-                    fileInputWrapper.style.display = 'block';
-                    const textElement = fileInputWrapper.querySelector('.file-text');
-                    if (textElement) {
-                        textElement.textContent = `✓ ${file.name} (загружен)`;
-                    }
-                    
-                    // Показываем кнопку удаления и скрываем иконку файла
-                    const removeAudioBtn = document.getElementById('remove-audio-file');
-                    const fileIcon = fileInputWrapper.querySelector('.file-icon');
-                    if (removeAudioBtn) {
-                        removeAudioBtn.classList.remove('hidden');
-                    }
-                    if (fileIcon) {
-                        fileIcon.style.display = 'none';
-                    }
-                }, 1000);
-            }
-            
-            const successMsg = currentLang === 'ru' ? 'Файл успешно загружен!' : 'File uploaded successfully!';
-            showNotification(successMsg, 'success');
-        } else {
-            throw new Error(data.error);
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else if (minutes > 0) {
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
-    } catch (error) {
-        console.error('Ошибка загрузки файла:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка загрузки файла: ' + error.message : 'File upload error: ' + error.message;
-        showNotification(errorMsg, 'error');
-        
-        hideUploadProgress('voice-upload-progress', 1000);
-        
-        const fileInputWrapper = document.querySelector('.file-input-wrapper');
-        if (fileInputWrapper) {
-            setTimeout(() => {
-                fileInputWrapper.style.display = 'block';
-                const textElement = fileInputWrapper.querySelector('.file-text');
-                if (textElement) {
-                    textElement.textContent = i18n.select_audio_file || 'Выберите файл';
-                }
-            }, 1000);
-        }
-        
-        uploadedAudioFile = null;
-    }
-}
-
-async function removeUploadedAudioFile() {
-    if (!uploadedAudioFile) {
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/remove-audio', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                file_path: uploadedAudioFile.path
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Сбрасываем состояние
-            uploadedAudioFile = null;
-            
-            // Скрываем кнопку удаления и показываем иконку файла
-            const removeAudioBtn = document.getElementById('remove-audio-file');
-            if (removeAudioBtn) {
-                removeAudioBtn.classList.add('hidden');
-            }
-            const fileIcon = document.querySelector('.file-icon');
-            if (fileIcon) {
-                fileIcon.style.display = 'block';
-            }
-            
-            // Сбрасываем поле загрузки
-            const audioFileInput = document.getElementById('audio-file');
-            if (audioFileInput) {
-                audioFileInput.value = '';
-            }
-            
-            // Возвращаем исходный вид поля загрузки
-            const fileInputWrapper = document.querySelector('.file-input-wrapper');
-            if (fileInputWrapper) {
-                fileInputWrapper.style.display = 'block';
-                const textElement = fileInputWrapper.querySelector('.file-text');
-                if (textElement) {
-                    textElement.textContent = i18n.select_audio_file || 'Выберите файл';
-                }
-                const label = fileInputWrapper.querySelector('.file-label');
-                if (label) {
-                    label.style.borderColor = 'var(--border-color)';
-                }
-            }
-            
-            // Скрываем прогресс загрузки
-            hideUploadProgress('voice-upload-progress', 0);
-            
-            const successMsg = currentLang === 'ru' ? 'Файл удален' : 'File removed';
-            showNotification(successMsg, 'success');
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка удаления файла:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка удаления файла: ' + error.message : 'File removal error: ' + error.message;
-        showNotification(errorMsg, 'error');
-    }
-}
-
-function setupForms() {
-    const voiceForm = document.getElementById('voice-conversion-form');
-    if (voiceForm) {
-        voiceForm.addEventListener('submit', handleVoiceConversion);
-    }
-    
-    const ttsForm = document.getElementById('tts-conversion-form');
-    if (ttsForm) {
-        ttsForm.addEventListener('submit', handleTTSConversion);
-    }
-    
-    const downloadForm = document.getElementById('download-model-form');
-    if (downloadForm) {
-        downloadForm.addEventListener('submit', handleDownloadModel);
-    }
-    
-    const zipForm = document.getElementById('upload-zip-form');
-    if (zipForm) {
-        zipForm.addEventListener('submit', handleUploadZip);
-    }
-    
-    const hubertForm = document.getElementById('hubert-form');
-    if (hubertForm) {
-        hubertForm.addEventListener('submit', handleInstallHubert);
-    }
-    
-    const refreshRvcBtn = document.getElementById('refresh-rvc-models');
-    if (refreshRvcBtn) {
-        refreshRvcBtn.addEventListener('click', handleRefreshRvcModels);
-    }
-
-    const refreshTtsBtn = document.getElementById('refresh-tts-models');
-    if (refreshTtsBtn) {
-        refreshTtsBtn.addEventListener('click', handleRefreshTtsModels);
-    }
-    
-    setupAutopitchAutotune();
-}
-
-function setupAutopitchAutotune() {
-    const autopitchCheckbox = document.getElementById('autopitch');
-    const autotuneCheckbox = document.getElementById('autotune');
-    const autopitchSettings = document.getElementById('autopitch-settings');
-    const autotuneSettings = document.getElementById('autotune-settings');
-    const pitchSlider = document.getElementById('rvc-pitch');
-    const pitchGroup = pitchSlider ? pitchSlider.closest('.form-group') : null;
-    
-    if (autopitchCheckbox && autopitchSettings) {
-        autopitchCheckbox.addEventListener('change', function() {
-            autopitchSettings.style.display = this.checked ? 'block' : 'none';
-            
-            if (pitchGroup) {
-                pitchGroup.style.visibility = this.checked ? 'hidden' : 'visible';
-                pitchGroup.style.height = this.checked ? '0' : 'auto';
-                pitchGroup.style.overflow = this.checked ? 'hidden' : 'visible';
-                pitchGroup.style.marginBottom = this.checked ? '0' : '';
-            }
-            
-            if (this.checked) {
-                const pitchValue = document.getElementById('rvc-pitch-value');
-                if (pitchSlider && pitchValue) {
-                    pitchSlider.value = '0';
-                    pitchValue.textContent = '0';
-                }
-            }
-        });
-    }
-    
-    if (autotuneCheckbox && autotuneSettings) {
-        autotuneCheckbox.addEventListener('change', function() {
-            autotuneSettings.style.display = this.checked ? 'block' : 'none';
-        });
-    }
-    
-    const autopitchThresholdSlider = document.getElementById('autopitch-threshold');
-    const autotuneStrengthSlider = document.getElementById('autotune-strength');
-    
-    if (autopitchThresholdSlider) {
-        const valueDisplay = document.getElementById('autopitch-threshold-value');
-        autopitchThresholdSlider.addEventListener('input', function() {
-            if (valueDisplay) valueDisplay.textContent = this.value;
-        });
-    }
-    
-    if (autotuneStrengthSlider) {
-        const valueDisplay = document.getElementById('autotune-strength-value');
-        autotuneStrengthSlider.addEventListener('input', function() {
-            if (valueDisplay) valueDisplay.textContent = this.value;
-        });
-    }
-}
-
-async function loadInitialData() {
-    try {
-        await Promise.all([
-            loadModels(),
-            loadVoices(),
-            loadFormats(),
-            loadF0Methods(),
-            loadHubertModels()
-        ]);
-        
-        showNotification('Данные успешно загружены', 'success');
-    } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
-        showNotification('Ошибка загрузки данных: ' + error.message, 'error');
-    }
-}
-
-async function loadModels() {
-    try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
-        
-        if (data.success) {
-            currentModels = data.models;
-            updateModelSelects();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки моделей:', error);
-        throw error;
-    }
-}
-
-async function loadVoices() {
-    try {
-        const response = await fetch('/api/voices');
-        const data = await response.json();
-        
-        if (data.success) {
-            currentVoices = data.voices;
-            updateVoiceSelect();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки голосов:', error);
-        throw error;
-    }
-}
-
-async function loadFormats() {
-    try {
-        const response = await fetch('/api/formats');
-        const data = await response.json();
-        
-        if (data.success) {
-            currentFormats = data.formats;
-            updateFormatSelects();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки форматов:', error);
-        throw error;
-    }
-}
-
-async function loadF0Methods() {
-    try {
-        const response = await fetch('/api/f0-methods');
-        const data = await response.json();
-        
-        if (data.success) {
-            currentF0Methods = data.methods;
-            updateF0MethodSelect();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки методов F0:', error);
-        throw error;
-    }
-}
-
-async function loadHubertModels() {
-    try {
-        const response = await fetch('/api/hubert-models');
-        const data = await response.json();
-        
-        if (data.success) {
-            currentHubertModels = data.models;
-            updateHubertSelect();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки HuBERT моделей:', error);
-        throw error;
-    }
-}
-
-function updateModelSelects() {
-    const selects = ['rvc-model', 'tts-rvc-model'];
-    
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        if (select) {
-            select.innerHTML = `<option value="">${i18n.select_model || 'Выберите модель'}</option>`;
-            
-            currentModels.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model;
-                option.textContent = model;
-                select.appendChild(option);
-            });
-        }
-    });
-}
-
-function updateVoiceSelect() {
-    const select = document.getElementById('tts-voice');
-    if (select) {
-        select.innerHTML = `<option value="">${i18n.select_voice || 'Выберите голос'}</option>`;
-        
-        Object.keys(currentVoices).forEach(language => {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = language;
-            
-            currentVoices[language].forEach(voice => {
-                const option = document.createElement('option');
-                option.value = voice;
-                option.textContent = voice;
-                optgroup.appendChild(option);
-            });
-            
-            select.appendChild(optgroup);
-        });
-    }
-}
-
-function updateFormatSelects() {
-    const selects = ['output-format'];
-    
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        if (select) {
-            select.innerHTML = '';
-            
-            currentFormats.forEach(format => {
-                const option = document.createElement('option');
-                option.value = format;
-                option.textContent = format.toUpperCase();
-                select.appendChild(option);
-            });
-        }
-    });
-}
-
-function updateF0MethodSelect() {
-    const select = document.getElementById('f0-method');
-    if (select && currentF0Methods.length > 0) {
-        select.innerHTML = '';
-        
-        currentF0Methods.forEach(method => {
-            const option = document.createElement('option');
-            option.value = method;
-            option.textContent = method;
-            select.appendChild(option);
-        });
-    }
-}
-
-function updateHubertSelect() {
-    const select = document.getElementById('hubert-model');
-    if (select) {
-        select.innerHTML = `<option value="">${i18n.select_hubert_model || 'Выберите HuBERT модель'}</option>`;
-        
-        currentHubertModels.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model;
-            option.textContent = model;
-            select.appendChild(option);
-        });
-    }
-}
-
-async function handleVoiceConversion(event) {
-    event.preventDefault();
-    
-    if (!uploadedAudioFile) {
-        const errorMsg = currentLang === 'ru' ? 'Пожалуйста, сначала выберите и загрузите аудиофайл' : 'Please select and upload an audio file first';
-        showNotification(errorMsg, 'error');
-        return;
-    }
-    
-    if (currentAudioPlayer) {
-        currentAudioPlayer.destroy();
-        currentAudioPlayer = null;
-    }
-    
-    const formData = new FormData(event.target);
-    
-    formData.set('audio_file_path', uploadedAudioFile.path);
-    
-    const autopitchChecked = document.getElementById('autopitch').checked;
-    const autotuneChecked = document.getElementById('autotune').checked;
-    
-    formData.set('autopitch', autopitchChecked ? 'true' : 'false');
-    formData.set('autotune', autotuneChecked ? 'true' : 'false');
-    
-    if (autopitchChecked) {
-        formData.set('autopitch_threshold', document.getElementById('autopitch-threshold').value);
-    } else {
-        formData.set('autopitch_threshold', '155.0');
-    }
-    
-    if (autotuneChecked) {
-        formData.set('autotune_strength', document.getElementById('autotune-strength').value);
-    } else {
-        formData.set('autotune_strength', '1.0');
-    }
-    
-    showConversionProgress('voice-conversion-progress');
-    
-    // Запускаем отслеживание реального прогресса
-    const progressInterval = startRealTimeProgress('voice-conversion-progress');
-    
-    try {
-        const response = await fetch('/api/voice-conversion', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        // Останавливаем отслеживание прогресса
-        clearInterval(progressInterval);
-        
-        if (data.success) {
-            // Устанавливаем финальный прогресс
-            updateRealTimeProgress('voice-conversion-progress', {
-                progress: 1.0,
-                current_step: 8,
-                total_steps: 8,
-                step_name: currentLang === 'ru' ? 'Завершено' : 'Completed',
-                description: currentLang === 'ru' ? 'Конвертация завершена' : 'Conversion completed'
-            });
-            
-            showResult({
-                type: 'voice-conversion',
-                outputPath: data.output_path,
-                downloadUrl: data.download_url
-            });
-            const successMsg = currentLang === 'ru' ? 'Преобразование голоса завершено!' : 'Voice conversion completed successfully!';
-            showNotification(successMsg, 'success');
-            
-            hideUploadProgress('voice-conversion-progress', 2000);
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        // Останавливаем отслеживание прогресса в случае ошибки
-        clearInterval(progressInterval);
-        
-        console.error('Ошибка преобразования:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка преобразования: ' + error.message : 'Conversion error: ' + error.message;
-        showNotification(errorMsg, 'error');
-        hideUploadProgress('voice-conversion-progress', 1000);
-    }
-}
-
-async function handleTTSConversion(event) {
-    event.preventDefault();
-    
-    if (currentAudioPlayer) {
-        currentAudioPlayer.destroy();
-        currentAudioPlayer = null;
-    }
-    
-    const formData = new FormData(event.target);
-    const requestData = {};
-    
-    for (let [key, value] of formData.entries()) {
-        requestData[key] = value;
-    }
-    
-    try {
-        showConversionProgress('tts-synthesis-progress');
-        
-        const response = await fetch('/api/tts-conversion', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            hideUploadProgress('tts-synthesis-progress');
-            showConversionProgress('tts-conversion-progress');
-            
-            await simulateConversionProgress('tts-conversion-progress');
-            
-            showResult({
-                type: 'tts-conversion',
-                synthPath: data.synth_path,
-                convertedPath: data.converted_path,
-                downloadUrl: data.download_url
-            });
-            const successMsg = currentLang === 'ru' ? 'Синтез и преобразование завершены!' : 'Synthesis and conversion completed successfully!';
-            showNotification(successMsg, 'success');
-            
-            hideUploadProgress('tts-conversion-progress', 2000);
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка TTS преобразования:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка TTS преобразования: ' + error.message : 'TTS conversion error: ' + error.message;
-        showNotification(errorMsg, 'error');
-        
-        hideUploadProgress('tts-synthesis-progress', 1000);
-        hideUploadProgress('tts-conversion-progress', 1000);
-    }
-}
-
-async function handleDownloadModel(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const requestData = {
-        url: formData.get('url'),
-        model_name: formData.get('model_name')
-    };
-    
-    const progressId = 'model-download-progress';
-    showModelDownloadProgress(progressId, requestData.model_name);
-    
-    try {
-        const response = await fetch('/api/download-model', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            updateUploadProgress(progressId, 100, 'complete');
-            const successMsg = currentLang === 'ru' ? 'Модель успешно загружена!' : 'Model downloaded successfully!';
-            showNotification(successMsg, 'success');
-            await loadModels(); 
-            event.target.reset();
-            hideUploadProgress(progressId, 2000);
-        } else {
-            updateUploadProgress(progressId, 0, 'error');
-            hideUploadProgress(progressId, 1000);
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки модели:', error);
-        updateUploadProgress(progressId, 0, 'error');
-        hideUploadProgress(progressId, 1000);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка загрузки модели: ' + error.message : 'Model download error: ' + error.message;
-        showNotification(errorMsg, 'error');
-    }
-}
-
-async function handleUploadZip(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const modelFile = formData.get('model_file');
-    const modelName = formData.get('model_name');
-    
-    if (!modelFile || modelFile.size === 0) {
-        showNotification('Пожалуйста, выберите ZIP файл', 'error');
-        return;
-    }
-    
-    if (modelFile.size > 500 * 1024 * 1024) {
-        const errorMsg = currentLang === 'ru' ? 'Файл слишком большой (максимум 500MB)' : 'File too large (max 500MB)';
-        showNotification(errorMsg, 'error');
-        return;
-    }
-    
-    if (!modelName || modelName.trim() === '') {
-        const errorMsg = currentLang === 'ru' ? 'Пожалуйста, введите имя модели' : 'Please enter model name';
-        showNotification(errorMsg, 'error');
-        return;
-    }
-    
-    showUploadProgress('zip-upload-progress', modelFile);
-    
-    try {
-        const response = await uploadWithProgress('/api/upload-model-zip', formData, 'zip-upload-progress');
-        const data = await response.json();
-        
-        if (data.success) {
-            const successMsg = currentLang === 'ru' ? 'ZIP модель успешно загружена!' : 'ZIP model uploaded successfully!';
-            showNotification(successMsg, 'success');
-            await loadModels(); 
-            event.target.reset();
-            
-            const fileLabel = document.querySelector('#zip-file + .file-label .file-text');
-            if (fileLabel) {
-                fileLabel.textContent = i18n.select_zip || 'Выберите ZIP файл';
-            }
-            hideUploadProgress('zip-upload-progress', 2000);
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки ZIP:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка загрузки ZIP: ' + error.message : 'ZIP upload error: ' + error.message;
-        showNotification(errorMsg, 'error');
-        hideUploadProgress('zip-upload-progress', 1000);
-    }
-}
-
-async function handleInstallHubert(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const requestData = {
-        model_name: formData.get('model_name'),
-        custom_url: formData.get('custom_url') || null
-    };
-    
-    try {
-        const response = await fetch('/api/install-hubert', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            const successMsg = currentLang === 'ru' ? 'HuBERT модель успешно установлена!' : 'HuBERT model installed successfully!';
-            showNotification(successMsg, 'success');
-            event.target.reset();
-        } else {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        console.error('Ошибка установки HuBERT:', error);
-        const errorMsg = currentLang === 'ru' ? 'Ошибка установки HuBERT: ' + error.message : 'HuBERT installation error: ' + error.message;
-        showNotification(errorMsg, 'error');
-    }
-}
-
-function showResult(result) {
-    let resultArea, resultContent, playerContainerId, playerVariable;
-    
-    if (result.type === 'voice-conversion') {
-        resultArea = document.getElementById('voice-conversion-result');
-        resultContent = document.getElementById('voice-conversion-result-content');
-        playerContainerId = 'voice-conversion-audio-player';
-        playerVariable = 'voiceConversionPlayer';
-    } else if (result.type === 'tts-conversion') {
-        resultArea = document.getElementById('tts-conversion-result');
-        resultContent = document.getElementById('tts-conversion-result-content');
-        playerContainerId = 'tts-conversion-audio-player';
-        playerVariable = 'ttsConversionPlayer';
-    }
-    
-    if (!resultArea || !resultContent) return;
-    
-    let html = '';
-    
-    if (result.type === 'voice-conversion') {
-        const titleText = currentLang === 'ru' ? 'Преобразование голоса завершено' : 'Voice conversion completed';
-        const fileText = currentLang === 'ru' ? 'Выходной файл:' : 'Output file:';
-        
-        html = `
-            <h4>${titleText}</h4>
-            <p><strong>${fileText}</strong> ${result.outputPath}</p>
-            <div class="audio-player-container" id="${playerContainerId}"></div>
-        `;
-    } else if (result.type === 'tts-conversion') {
-        const titleText = currentLang === 'ru' ? 'Синтез и преобразование завершены' : 'Synthesis and conversion completed';
-        const synthText = currentLang === 'ru' ? 'Синтезированная речь:' : 'Synthesized speech:';
-        const convertedText = currentLang === 'ru' ? 'Преобразованный голос:' : 'Converted voice:';
-        
-        html = `
-            <h4>${titleText}</h4>
-            <p><strong>${synthText}</strong> ${result.synthPath}</p>
-            <p><strong>${convertedText}</strong> ${result.convertedPath}</p>
-            <div class="audio-player-container" id="${playerContainerId}"></div>
-        `;
-    }
-    
-    resultContent.innerHTML = html;
-    resultArea.classList.remove('hidden');
-    
-    if (result.type === 'voice-conversion' && voiceConversionPlayer) {
-        voiceConversionPlayer.destroy();
-        voiceConversionPlayer = null;
-    } else if (result.type === 'tts-conversion' && ttsConversionPlayer) {
-        ttsConversionPlayer.destroy();
-        ttsConversionPlayer = null;
-    }
-    
-    if (result.downloadUrl) {
-        setTimeout(() => {
-            const playerContainer = document.getElementById(playerContainerId);
-            if (playerContainer) {
-                const newPlayer = new AudioPlayer(playerContainer);
-                newPlayer.loadAudio(result.downloadUrl, result.outputPath || 'result.mp3');
-                
-                if (result.type === 'voice-conversion') {
-                    voiceConversionPlayer = newPlayer;
-                } else if (result.type === 'tts-conversion') {
-                    ttsConversionPlayer = newPlayer;
-                }
-                
-                currentAudioPlayer = newPlayer;
-            }
-        }, 100);
-    }
-    
-    resultArea.scrollIntoView({ behavior: 'smooth' });
-}
-
-
-
-function showNotification(message, type = 'success') {
-    const notifications = document.getElementById('notifications');
-    if (!notifications) return;
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    notifications.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 5000);
-    
-    notification.addEventListener('click', () => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    });
-}
-
-function initializeLanguageSwitcher() {
-    const languageSelect = document.getElementById('language-select');
-    
-    if (languageSelect) {
-        // Устанавливаем текущий язык как выбранный
-        languageSelect.value = currentLang;
-        
-        // Добавляем обработчик изменения языка
-        languageSelect.addEventListener('change', (event) => {
-            switchLanguage(event.target.value);
-        });
-    }
-}
-
-function switchLanguage(lang) {
-    if (lang === currentLang) return;
-    
-    fetch('/api/set-language', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ language: lang })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            showNotification(data.error || 'Ошибка переключения языка', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Ошибка переключения языка:', error);
-        showNotification('Ошибка переключения языка', 'error');
-    });
-}
-
-
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function isFileSupported(file, allowedTypes) {
-    const fileExtension = file.name.split('.').pop().toLowerCase();
-    return allowedTypes.includes(fileExtension);
-}
-
-function handleNetworkError(error) {
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        return 'Ошибка сети. Проверьте подключение к интернету.';
-    }
-    return error.message || 'Произошла неизвестная ошибка';
-}
-
-async function handleRefreshRvcModels() {
-    
-    const refreshBtn = document.getElementById('refresh-rvc-models');
-    const refreshIcon = refreshBtn.querySelector('.refresh-icon');
-    
-    refreshIcon.style.transform = 'rotate(360deg)';
-    refreshBtn.disabled = true;
-    
-    try {
-        await loadModels();
-        
-        const message = currentLang === 'ru' ? 'Список моделей обновлен' : 'Models list updated';
-        showNotification(message, 'success');
-        
-    } catch (error) {
-        const message = currentLang === 'ru' ? 'Ошибка при обновлении моделей' : 'Error updating models';
-        showNotification(message, 'error');
-    } finally {
-        setTimeout(() => {
-            refreshIcon.style.transform = '';
-            refreshBtn.disabled = false;
-        }, 300);
-    }
-}
-
-async function handleRefreshTtsModels() {
-    
-    const refreshBtn = document.getElementById('refresh-tts-models');
-    const refreshIcon = refreshBtn.querySelector('.refresh-icon');
-    
-    refreshIcon.style.transform = 'rotate(360deg)';
-    refreshBtn.disabled = true;
-    
-    try {
-        await loadModels();
-        
-        const message = currentLang === 'ru' ? 'Список моделей обновлен' : 'Models list updated';
-        showNotification(message, 'success');
-        
-    } catch (error) {
-        const message = currentLang === 'ru' ? 'Ошибка при обновлении моделей' : 'Error updating models';
-        showNotification(message, 'error');
-    } finally {
-        setTimeout(() => {
-            refreshIcon.style.transform = '';
-            refreshBtn.disabled = false;
-        }, 300);
-    }
-}
-
-const activeUploads = new Map();
-
-async function uploadWithProgress(url, formData, progressId) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        const startTime = Date.now();
-        let lastLoaded = 0;
-        let lastTime = startTime;
-        
-        activeUploads.set(progressId, xhr);
-        
-        xhr.upload.addEventListener('progress', (event) => {
-            if (event.lengthComputable) {
-                const currentTime = Date.now();
-                const percentComplete = Math.round((event.loaded / event.total) * 100);
-                
-
-                const timeDiff = (currentTime - lastTime) / 1000; 
-                const loadedDiff = event.loaded - lastLoaded;
-                const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0; 
-                
-                const remaining = event.total - event.loaded;
-                const eta = speed > 0 ? remaining / speed : 0; 
-                
-                updateUploadProgress(progressId, percentComplete, 'uploading', {
-                    speed: speed,
-                    eta: eta,
-                    loaded: event.loaded,
-                    total: event.total
-                });
-                
-                lastLoaded = event.loaded;
-                lastTime = currentTime;
-            }
-        });
-        
-        xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                updateUploadProgress(progressId, 100, 'processing');
-                setTimeout(() => {
-                    activeUploads.delete(progressId);
-                    resolve({
-                        json: () => Promise.resolve(JSON.parse(xhr.responseText)),
-                        ok: true,
-                        status: xhr.status
-                    });
-                }, 500);
-            } else {
-                updateUploadProgress(progressId, 0, 'error');
-                activeUploads.delete(progressId);
-                try {
-                    const errorResponse = JSON.parse(xhr.responseText);
-                    reject(new Error(errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`));
-                } catch (e) {
-                    reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-                }
-            }
-        });
-        
-        xhr.addEventListener('error', () => {
-            updateUploadProgress(progressId, 0, 'error');
-            activeUploads.delete(progressId);
-            reject(new Error('Ошибка сети при загрузке файла'));
-        });
-        
-        xhr.addEventListener('abort', () => {
-            updateUploadProgress(progressId, 0, 'cancelled');
-            activeUploads.delete(progressId);
-            reject(new Error('Загрузка была отменена'));
-        });
-        
-        xhr.open('POST', url);
-        xhr.send(formData);
-    });
-}
-
-function showUploadProgress(progressId, file = null) {
-    const progressElement = document.getElementById(progressId);
-    if (progressElement) {
-        progressElement.classList.remove('hidden');
-        progressElement.classList.add('active');
-        
-        if (file) {
-            const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
-            const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
-            
-            if (fileName) {
-                fileName.textContent = file.name;
-            }
-            
-            if (fileSize) {
-                fileSize.textContent = formatFileSize(file.size);
-            }
-        }
-        
-        updateUploadProgress(progressId, 0, 'preparing');
-    }
-}
-
-function hideUploadProgress(progressId, delay = 0) {
-    setTimeout(() => {
-        const progressElement = document.getElementById(progressId);
-        if (progressElement) {
-            progressElement.classList.add('hidden');
-            progressElement.classList.remove('active');
-            
-            const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
-            const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
-            const progressSpeed = progressElement.querySelector('.progress-speed');
-            const progressEta = progressElement.querySelector('.progress-eta');
-            const progressSize = progressElement.querySelector('.progress-size');
-            
-            if (fileName) fileName.textContent = '';
-            if (fileSize) fileSize.textContent = '';
-            if (progressSpeed) progressSpeed.textContent = '';
-            if (progressEta) progressEta.textContent = '';
-            if (progressSize) progressSize.textContent = '';
-            
-            updateUploadProgress(progressId, 0, 'preparing');
-        }
-    }, delay);
-}
-
-function showModelDownloadProgress(progressId, modelName) {
-    const progressElement = document.getElementById(progressId);
-    if (progressElement) {
-        progressElement.classList.remove('hidden');
-        progressElement.classList.add('active');
-        
-        const fileName = progressElement.querySelector('.progress-filename') || progressElement.querySelector('.progress-file-name');
-        const fileSize = progressElement.querySelector('.progress-filesize') || progressElement.querySelector('.progress-file-size');
-        
-        if (fileName) {
-            fileName.textContent = modelName;
-        }
-        
-        if (fileSize) {
-            fileSize.textContent = currentLang === 'ru' ? 'Загрузка...' : 'Downloading...';
-        }
-        
-        updateUploadProgress(progressId, 0, 'preparing');
-        
-        simulateModelDownloadProgress(progressId);
-    }
-}
-
-async function simulateModelDownloadProgress(progressId) {
-    const steps = [10, 25, 40, 60, 80, 95];
-    
-    for (const step of steps) {
-        updateUploadProgress(progressId, step, 'uploading');
-        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300));
-    }
-}
-
-function updateUploadProgress(progressId, percentage, status = 'uploading', details = {}) {
-    const progressElement = document.getElementById(progressId);
-    if (!progressElement) return;
-    
-    const progressFill = progressElement.querySelector('.progress-fill');
-    const progressPercentage = progressElement.querySelector('.progress-percentage');
-    const progressStatus = progressElement.querySelector('.progress-status');
-    const progressSpeed = progressElement.querySelector('.progress-speed');
-    const progressEta = progressElement.querySelector('.progress-eta');
-    const progressSize = progressElement.querySelector('.progress-size');
-    const cancelButton = progressElement.querySelector('.progress-cancel');
-    
-    if (progressFill) {
-        progressFill.style.width = `${percentage}%`;
-        
-        progressFill.style.transition = 'width 0.3s ease';
-        
-        progressFill.className = `progress-fill ${status}`;
-    }
-    
-    if (progressPercentage) {
-        progressPercentage.textContent = `${percentage}%`;
-    }
-    
-    if (progressStatus) {
-        const statusTexts = {
-            'preparing': currentLang === 'ru' ? 'Подготовка...' : 'Preparing...',
-            'uploading': currentLang === 'ru' ? 'Загрузка...' : 'Uploading...',
-            'processing': currentLang === 'ru' ? 'Обработка...' : 'Processing...',
-            'complete': currentLang === 'ru' ? 'Завершено' : 'Completed',
-            'error': currentLang === 'ru' ? 'Ошибка' : 'Error',
-            'cancelled': currentLang === 'ru' ? 'Отменено' : 'Cancelled'
-        };
-        
-        progressStatus.textContent = statusTexts[status] || statusTexts['uploading'];
-    }
-    
-    if (progressSpeed && details.speed !== undefined) {
-        const speedText = formatSpeed(details.speed);
-        progressSpeed.textContent = speedText;
-        progressSpeed.style.display = status === 'uploading' ? 'inline' : 'none';
-    }
-    
-    if (progressEta && details.eta !== undefined && status === 'uploading') {
-        const etaText = formatTime(details.eta);
-        progressEta.textContent = etaText;
-        progressEta.style.display = 'inline';
-    } else if (progressEta) {
-        progressEta.style.display = 'none';
-    }
-    
-    if (progressSize && details.loaded !== undefined && details.total !== undefined) {
-        // Для конвертации показываем количество шагов, для загрузки - размер файлов
-        const sizeText = status === 'processing' ? 
-            `${details.loaded} / ${details.total}` : 
-            `${formatFileSize(details.loaded)} / ${formatFileSize(details.total)}`;
-        progressSize.textContent = sizeText;
-        progressSize.style.display = (status === 'uploading' || status === 'processing') ? 'inline' : 'none';
-    }
-    
-    if (cancelButton) {
-        if (status === 'uploading' || status === 'preparing') {
-            cancelButton.style.display = 'inline-block';
-            cancelButton.onclick = () => cancelUpload(progressId);
-        } else {
-            cancelButton.style.display = 'none';
-        }
-    }
-}
-
-function isFileTypeSupported(file, allowedTypes) {
-    if (!file || !file.name) return false;
-    
-    const fileName = file.name.toLowerCase();
-    const fileExtension = fileName.split('.').pop();
-    
-    return allowedTypes.includes(fileExtension);
-}
-
-function validateFile(file, options = {}) {
-    const {
-        maxSize = 500 * 1024 * 1024, 
-        allowedTypes = [],
-        minSize = 0
-    } = options;
-    
-    const result = {
-        valid: true,
-        errors: []
-    };
-    
-    if (!file) {
-        result.valid = false;
-        result.errors.push(currentLang === 'ru' ? 'Файл не выбран' : 'No file selected');
-        return result;
-    }
-    
-    if (file.size > maxSize) {
-        result.valid = false;
-        const maxSizeMB = Math.round(maxSize / (1024 * 1024));
-        result.errors.push(
-            currentLang === 'ru' 
-                ? `Файл слишком большой (максимум ${maxSizeMB}MB)` 
-                : `File too large (max ${maxSizeMB}MB)`
-        );
-    }
-    
-    if (file.size < minSize) {
-        result.valid = false;
-        result.errors.push(
-            currentLang === 'ru' 
-                ? 'Файл слишком маленький' 
-                : 'File too small'
-        );
-    }
-    
-    if (allowedTypes.length > 0 && !isFileTypeSupported(file, allowedTypes)) {
-        result.valid = false;
-        result.errors.push(
-            currentLang === 'ru' 
-                ? `Неподдерживаемый тип файла. Разрешены: ${allowedTypes.join(', ')}` 
-                : `Unsupported file type. Allowed: ${allowedTypes.join(', ')}`
-        );
-    }
-    
-    return result;
-}
-function cancelUpload(progressId) {
-    const xhr = activeUploads.get(progressId);
-    if (xhr) {
-        xhr.abort();
-        activeUploads.delete(progressId);
-        updateUploadProgress(progressId, 0, 'cancelled');
-        
-        const message = currentLang === 'ru' ? 'Загрузка отменена' : 'Upload cancelled';
-        showNotification(message, 'info');
-    }
-}
-
-function formatSpeed(bytesPerSecond) {
-    if (bytesPerSecond === 0) return '0 B/s';
-    
-    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-    const k = 1024;
-    const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
-    
-    return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
-}
-
-function formatTime(seconds) {
-    if (seconds === 0 || !isFinite(seconds)) {
-        return currentLang === 'ru' ? 'Вычисление...' : 'Calculating...';
-    }
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    } else if (minutes > 0) {
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    } else {
         return `${secs}s`;
     }
-}
 
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const k = 1024;
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + units[i];
-}
+    static validateFile(file, options = {}) {
+        const {
+            maxSize = CONFIG.MAX_FILE_SIZE,
+            allowedTypes = [],
+            minSize = 0
+        } = options;
 
-function showConversionProgress(progressId) {
-    const progressElement = document.getElementById(progressId);
-    if (progressElement) {
-        progressElement.classList.remove('hidden');
-        progressElement.classList.add('active');
-        
-        updateUploadProgress(progressId, 0, 'processing');
-    }
-}
+        const result = { valid: true, errors: [] };
 
-function startRealTimeProgress(progressId) {
-    // Сбрасываем прогресс в начальное состояние
-    updateRealTimeProgress(progressId, {
-        progress: 0.0,
-        current_step: 0,
-        total_steps: 8,
-        step_name: currentLang === 'ru' ? 'Инициализация' : 'Initialization',
-        description: currentLang === 'ru' ? 'Подготовка к конвертации' : 'Preparing for conversion'
-    });
-    
-    // Запускаем периодический опрос прогресса
-    return setInterval(async () => {
-        try {
-            const response = await fetch('/api/conversion-progress');
-            const data = await response.json();
-            
-            if (data.success && data.progress) {
-                updateRealTimeProgress(progressId, data.progress);
+        if (!file) {
+            result.valid = false;
+            result.errors.push(appState.getMessage('noFileSelected') || 'No file selected');
+            return result;
+        }
+
+        if (file.size > maxSize) {
+            result.valid = false;
+            result.errors.push(appState.getMessage('fileTooLarge'));
+        }
+
+        if (file.size < minSize) {
+            result.valid = false;
+            result.errors.push(appState.getMessage('fileTooSmall') || 'File too small');
+        }
+
+        if (allowedTypes.length > 0) {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (!allowedTypes.includes(fileExtension)) {
+                result.valid = false;
+                result.errors.push(`Unsupported file type. Allowed: ${allowedTypes.join(', ')}`);
             }
-        } catch (error) {
-            console.error('Ошибка получения прогресса:', error);
         }
-    }, 500); // Обновляем каждые 500мс
-}
 
-function updateRealTimeProgress(progressId, progressData) {
-    const fileName = uploadedAudioFile ? uploadedAudioFile.name : 'audio_file';
-    const shortFileName = fileName.length > 30 ? fileName.substring(0, 30) + '...' : fileName;
-    
-    const percentage = Math.round(progressData.progress * 100);
-    
-    // Обновляем основной прогресс-бар
-    const details = {
-        loaded: progressData.current_step,
-        total: progressData.total_steps
-    };
-    
-    updateUploadProgress(progressId, percentage, percentage === 100 ? 'complete' : 'processing', details);
-    
-    // Обновляем детальную информацию
-    const progressElement = document.getElementById(progressId);
-    if (progressElement) {
-        const progressSizeValue = progressElement.querySelector('.progress-size-value');
-        if (progressSizeValue) {
-            progressSizeValue.textContent = `${progressData.current_step} / ${progressData.total_steps}`;
-        }
-        
-        const statusText = progressElement.querySelector('.progress-status-text');
-        if (statusText) {
-            const statusMessage = `[🌌] ${progressData.step_name} — ${shortFileName}\nКонвертация: ${percentage}% ${progressData.current_step}/${progressData.total_steps} [${progressData.description}]`;
-            statusText.textContent = statusMessage;
-        }
+        return result;
+    }
+
+    static async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
-async function simulateConversionProgress(progressId) {
-    const fileName = uploadedAudioFile ? uploadedAudioFile.name : 'audio_file';
-    const shortFileName = fileName.length > 30 ? fileName.substring(0, 30) + '...' : fileName;
-    
-    const steps = [
-        { progress: 0, current: 0, total: 2, elapsed: 0, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
-        { progress: 25, current: 0, total: 2, elapsed: 1, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
-        { progress: 50, current: 1, total: 2, elapsed: 2, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
-        { progress: 75, current: 1, total: 2, elapsed: 3, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
-        { progress: 100, current: 2, total: 2, elapsed: 5, text: currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' }
-    ];
-    
-    for (const step of steps) {
-        // Передаем правильные значения для отображения прогресса
-        const details = {
-            loaded: step.current,
-            total: step.total
+// === УВЕДОМЛЕНИЯ ===
+class NotificationManager {
+    static show(message, type = 'success') {
+        const notifications = document.getElementById('notifications');
+        if (!notifications) return;
+
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+
+        notifications.appendChild(notification);
+
+        const removeNotification = () => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
         };
-        
-        updateUploadProgress(progressId, step.progress, step.progress === 100 ? 'complete' : 'processing', details);
-        
-        // Обновляем элемент .progress-size-value напрямую
-        const progressElement = document.getElementById(progressId);
-        if (progressElement) {
-            const progressSizeValue = progressElement.querySelector('.progress-size-value');
-            if (progressSizeValue) {
-                progressSizeValue.textContent = `${step.current} / ${step.total}`;
+
+        setTimeout(removeNotification, CONFIG.NOTIFICATION_TIMEOUT);
+        notification.addEventListener('click', removeNotification);
+    }
+}
+
+// === УПРАВЛЕНИЕ ПРОГРЕССОМ ===
+class ProgressManager {
+    static show(progressId, file = null) {
+        const element = document.getElementById(progressId);
+        if (!element) return;
+
+        element.classList.remove('hidden');
+        element.classList.add('active');
+
+        if (file) {
+            this.updateFileInfo(progressId, file.name, Utils.formatFileSize(file.size));
+        }
+
+        this.update(progressId, 0, 'preparing');
+    }
+
+    static hide(progressId, delay = 0) {
+        setTimeout(() => {
+            const element = document.getElementById(progressId);
+            if (!element) return;
+
+            element.classList.add('hidden');
+            element.classList.remove('active');
+            this.clearFileInfo(progressId);
+            this.update(progressId, 0, 'preparing');
+        }, delay);
+    }
+
+    static update(progressId, percentage, status = 'uploading', details = {}) {
+        const element = document.getElementById(progressId);
+        if (!element) return;
+
+        const statusTexts = {
+            'preparing': appState.currentLang === 'ru' ? 'Подготовка...' : 'Preparing...',
+            'uploading': appState.currentLang === 'ru' ? 'Загрузка...' : 'Uploading...',
+            'processing': appState.currentLang === 'ru' ? 'Обработка...' : 'Processing...',
+            'complete': appState.currentLang === 'ru' ? 'Завершено' : 'Completed',
+            'error': appState.currentLang === 'ru' ? 'Ошибка' : 'Error',
+            'cancelled': appState.currentLang === 'ru' ? 'Отменено' : 'Cancelled'
+        };
+
+        // Обновляем элементы прогресса
+        const progressFill = element.querySelector('.progress-fill');
+        const progressPercentage = element.querySelector('.progress-percentage');
+        const progressStatus = element.querySelector('.progress-status');
+        const progressSpeed = element.querySelector('.progress-speed');
+        const progressEta = element.querySelector('.progress-eta');
+        const progressSize = element.querySelector('.progress-size');
+        const cancelButton = element.querySelector('.progress-cancel');
+
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+            progressFill.style.transition = 'width 0.3s ease';
+            progressFill.className = `progress-fill ${status}`;
+        }
+
+        if (progressPercentage) progressPercentage.textContent = `${percentage}%`;
+        if (progressStatus) progressStatus.textContent = statusTexts[status] || statusTexts['uploading'];
+
+        if (progressSpeed && details.speed !== undefined) {
+            progressSpeed.textContent = Utils.formatSpeed(details.speed);
+            progressSpeed.style.display = status === 'uploading' ? 'inline' : 'none';
+        }
+
+        if (progressEta && details.eta !== undefined && status === 'uploading') {
+            progressEta.textContent = Utils.formatTime(details.eta);
+            progressEta.style.display = 'inline';
+        } else if (progressEta) {
+            progressEta.style.display = 'none';
+        }
+
+        if (progressSize && details.loaded !== undefined && details.total !== undefined) {
+            const sizeText = status === 'processing' ?
+                `${details.loaded} / ${details.total}` :
+                `${Utils.formatFileSize(details.loaded)} / ${Utils.formatFileSize(details.total)}`;
+            progressSize.textContent = sizeText;
+            progressSize.style.display = (status === 'uploading' || status === 'processing') ? 'inline' : 'none';
+        }
+
+        if (cancelButton) {
+            if (status === 'uploading' || status === 'preparing') {
+                cancelButton.style.display = 'inline-block';
+                cancelButton.onclick = () => this.cancel(progressId);
+            } else {
+                cancelButton.style.display = 'none';
             }
-            
-            const statusText = progressElement.querySelector('.progress-status-text');
+        }
+    }
+
+    static updateFileInfo(progressId, fileName, fileSize) {
+        const element = document.getElementById(progressId);
+        if (!element) return;
+
+        const fileNameElement = element.querySelector('.progress-filename, .progress-file-name');
+        const fileSizeElement = element.querySelector('.progress-filesize, .progress-file-size');
+
+        if (fileNameElement) fileNameElement.textContent = fileName;
+        if (fileSizeElement) fileSizeElement.textContent = fileSize;
+    }
+
+    static clearFileInfo(progressId) {
+        const element = document.getElementById(progressId);
+        if (!element) return;
+
+        const elements = element.querySelectorAll('.progress-filename, .progress-file-name, .progress-filesize, .progress-file-size, .progress-speed, .progress-eta, .progress-size');
+        elements.forEach(el => el.textContent = '');
+    }
+
+    static cancel(progressId) {
+        const xhr = appState.activeUploads.get(progressId);
+        if (xhr) {
+            xhr.abort();
+            appState.activeUploads.delete(progressId);
+            this.update(progressId, 0, 'cancelled');
+            NotificationManager.show(appState.getMessage('uploadCancelled'), 'info');
+        }
+    }
+
+    static startRealTimeProgress(progressId) {
+        // Инициализируем прогресс
+        this.updateRealTimeProgress(progressId, {
+            progress: 0.0,
+            current_step: 0,
+            total_steps: 8,
+            step_name: appState.currentLang === 'ru' ? 'Инициализация' : 'Initialization',
+            description: appState.currentLang === 'ru' ? 'Подготовка к конвертации' : 'Preparing for conversion'
+        });
+
+        // Запускаем опрос прогресса каждые 200ms для более плавного обновления
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await fetch('/api/conversion-progress');
+                const data = await response.json();
+                if (data.success && data.progress) {
+                    this.updateRealTimeProgress(progressId, data.progress);
+                    
+                    // Останавливаем опрос, если конвертация завершена
+                    if (data.progress.progress >= 1.0) {
+                        clearInterval(intervalId);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка получения прогресса:', error);
+            }
+        }, 200); // Уменьшили интервал для более плавного обновления
+        
+        return intervalId;
+    }
+
+    static updateRealTimeProgress(progressId, progressData) {
+        const fileName = appState.uploadedAudioFile ? appState.uploadedAudioFile.name : 'audio_file';
+        const shortFileName = fileName.length > 30 ? fileName.substring(0, 30) + '...' : fileName;
+        const percentage = Math.round(progressData.progress * 100);
+
+        // Определяем статус на основе прогресса
+        let status = 'processing';
+        if (percentage >= 100) {
+            status = 'complete';
+        } else if (percentage === 0 && progressData.current_step === 0) {
+            status = 'preparing';
+        }
+
+        const details = {
+            loaded: progressData.current_step,
+            total: progressData.total_steps
+        };
+
+        this.update(progressId, percentage, status, details);
+
+        const element = document.getElementById(progressId);
+        if (element) {
+            // Обновляем счетчик шагов
+            const progressSizeValue = element.querySelector('.progress-size-value');
+            if (progressSizeValue) {
+                progressSizeValue.textContent = `${progressData.current_step} / ${progressData.total_steps}`;
+            }
+
+            // Обновляем текст статуса с более подробной информацией
+            const statusText = element.querySelector('.progress-status-text');
             if (statusText) {
-                const remaining = step.total - step.current;
-                const timeRemaining = remaining > 0 ? `00:0${Math.max(0, 5 - step.elapsed)}` : '00:00';
-                const speed = step.elapsed > 0 ? (step.elapsed / Math.max(1, step.current)).toFixed(2) : '0.00';
-                
-                const statusMessage = `[🌌] ${step.text} — ${shortFileName}\nКонвертация: ${step.progress}% ${step.current}/${step.total} [00:0${step.elapsed}<${timeRemaining}, ${speed}s/steps]`;
+                let statusMessage;
+                if (percentage >= 100) {
+                    statusMessage = appState.currentLang === 'ru' ? 
+                        `✅ Конвертация завершена — ${shortFileName}` :
+                        `✅ Conversion completed — ${shortFileName}`;
+                } else {
+                    const stepName = progressData.step_name || (appState.currentLang === 'ru' ? 'Обработка' : 'Processing');
+                    const description = progressData.description || stepName;
+                    statusMessage = `🌌 ${stepName} — ${shortFileName} (${percentage}%)`;
+                }
                 statusText.textContent = statusMessage;
             }
+
+            // Обновляем заголовок файла для лучшей информативности
+            const fileNameElement = element.querySelector('.progress-file-name');
+            if (fileNameElement && progressData.step_name) {
+                fileNameElement.textContent = progressData.step_name;
+            }
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
     }
 }
 
-function getNetworkErrorMessage(error) {
-    if (!navigator.onLine) {
-        return currentLang === 'ru' 
-            ? 'Нет подключения к интернету' 
-            : 'No internet connection';
+// === УПРАВЛЕНИЕ ФАЙЛАМИ ===
+class FileManager {
+    static async upload(url, formData, progressId) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const startTime = Date.now();
+            let lastLoaded = 0;
+            let lastTime = startTime;
+
+            appState.activeUploads.set(progressId, xhr);
+
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const currentTime = Date.now();
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    const timeDiff = (currentTime - lastTime) / 1000;
+                    const loadedDiff = event.loaded - lastLoaded;
+                    const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
+                    const remaining = event.total - event.loaded;
+                    const eta = speed > 0 ? remaining / speed : 0;
+
+                    ProgressManager.update(progressId, percentComplete, 'uploading', {
+                        speed, eta, loaded: event.loaded, total: event.total
+                    });
+
+                    lastLoaded = event.loaded;
+                    lastTime = currentTime;
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    ProgressManager.update(progressId, 100, 'processing');
+                    setTimeout(() => {
+                        appState.activeUploads.delete(progressId);
+                        resolve({
+                            json: () => Promise.resolve(JSON.parse(xhr.responseText)),
+                            ok: true,
+                            status: xhr.status
+                        });
+                    }, 500);
+                } else {
+                    ProgressManager.update(progressId, 0, 'error');
+                    appState.activeUploads.delete(progressId);
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        reject(new Error(errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`));
+                    } catch (e) {
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                    }
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                ProgressManager.update(progressId, 0, 'error');
+                appState.activeUploads.delete(progressId);
+                reject(new Error(appState.getMessage('networkError')));
+            });
+
+            xhr.addEventListener('abort', () => {
+                ProgressManager.update(progressId, 0, 'cancelled');
+                appState.activeUploads.delete(progressId);
+                reject(new Error(appState.getMessage('uploadCancelled')));
+            });
+
+            xhr.open('POST', url);
+            xhr.send(formData);
+        });
     }
-    
-    if (error.name === 'AbortError') {
-        return currentLang === 'ru' 
-            ? 'Операция была отменена' 
-            : 'Operation was cancelled';
+
+    static async uploadAudioFile(file) {
+        const validation = Utils.validateFile(file, {
+            allowedTypes: CONFIG.SUPPORTED_AUDIO_TYPES
+        });
+
+        if (!validation.valid) {
+            NotificationManager.show(validation.errors[0], 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('audio_file', file);
+
+        ProgressManager.show('voice-upload-progress', file);
+
+        try {
+            const response = await this.upload('/api/upload-audio', formData, 'voice-upload-progress');
+            const data = await response.json();
+
+            if (data.success) {
+                appState.uploadedAudioFile = {
+                    name: file.name,
+                    path: data.file_path,
+                    size: file.size
+                };
+
+                ProgressManager.hide('voice-upload-progress', 1000);
+                this.updateFileInputDisplay(file.name, true);
+                NotificationManager.show(appState.getMessage('fileUploadSuccess'), 'success');
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки файла:', error);
+            NotificationManager.show(`${appState.getMessage('fileUploadError')}: ${error.message}`, 'error');
+            ProgressManager.hide('voice-upload-progress', 1000);
+            this.resetFileInput();
+            appState.uploadedAudioFile = null;
+        }
     }
-    
-    if (error.message.includes('timeout')) {
-        return currentLang === 'ru' 
-            ? 'Превышено время ожидания' 
-            : 'Request timeout';
+
+    static async removeUploadedAudioFile() {
+        if (!appState.uploadedAudioFile) return;
+
+        try {
+            const response = await fetch('/api/remove-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: appState.uploadedAudioFile.path })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                appState.uploadedAudioFile = null;
+                this.resetFileInput();
+                ProgressManager.hide('voice-upload-progress', 0);
+                NotificationManager.show(appState.getMessage('fileRemoved'), 'success');
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка удаления файла:', error);
+            NotificationManager.show(`${appState.getMessage('fileRemovalError')}: ${error.message}`, 'error');
+        }
     }
-    
-    if (error.message.includes('Failed to fetch')) {
-        return currentLang === 'ru' 
-            ? 'Ошибка подключения к серверу' 
-            : 'Failed to connect to server';
+
+    static updateFileInputDisplay(fileName, uploaded = false) {
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        if (!fileInputWrapper) return;
+
+        setTimeout(() => {
+            fileInputWrapper.style.display = 'block';
+            const textElement = fileInputWrapper.querySelector('.file-text');
+            if (textElement) {
+                textElement.textContent = uploaded ? `✓ ${fileName} (загружен)` : fileName;
+            }
+
+            const removeBtn = document.getElementById('remove-audio-file');
+            const fileIcon = fileInputWrapper.querySelector('.file-icon');
+            
+            if (removeBtn) removeBtn.classList.toggle('hidden', !uploaded);
+            if (fileIcon) fileIcon.style.display = uploaded ? 'none' : 'block';
+        }, 1000);
     }
-    
-    return error.message || (
-        currentLang === 'ru' 
-            ? 'Произошла неизвестная ошибка' 
-            : 'An unknown error occurred'
-    );
+
+    static resetFileInput() {
+        const audioFileInput = document.getElementById('audio-file');
+        const removeBtn = document.getElementById('remove-audio-file');
+        const fileIcon = document.querySelector('.file-icon');
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+
+        if (audioFileInput) audioFileInput.value = '';
+        if (removeBtn) removeBtn.classList.add('hidden');
+        if (fileIcon) fileIcon.style.display = 'block';
+
+        if (fileInputWrapper) {
+            const textElement = fileInputWrapper.querySelector('.file-text');
+            const label = fileInputWrapper.querySelector('.file-label');
+            
+            if (textElement) textElement.textContent = appState.getMessage('selectAudioFile');
+            if (label) label.style.borderColor = 'var(--border-color)';
+        }
+    }
 }
+
+// === API МЕНЕДЖЕР ===
+class ApiManager {
+    static async fetchData(endpoint) {
+        try {
+            const response = await fetch(endpoint);
+            const data = await response.json();
+            
+            if (data.success) {
+                return data;
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error(`Ошибка загрузки ${endpoint}:`, error);
+            throw error;
+        }
+    }
+
+    static async loadModels() {
+        const data = await this.fetchData('/api/models');
+        appState.models = data.models;
+        UIManager.updateModelSelects();
+    }
+
+    static async loadVoices() {
+        const data = await this.fetchData('/api/voices');
+        appState.voices = data.voices;
+        UIManager.updateVoiceSelect();
+    }
+
+    static async loadFormats() {
+        const data = await this.fetchData('/api/formats');
+        appState.formats = data.formats;
+        UIManager.updateFormatSelects();
+    }
+
+    static async loadF0Methods() {
+        const data = await this.fetchData('/api/f0-methods');
+        appState.f0Methods = data.methods;
+        UIManager.updateF0MethodSelect();
+    }
+
+    static async loadHubertModels() {
+        const data = await this.fetchData('/api/hubert-models');
+        appState.hubertModels = data.models;
+        UIManager.updateHubertSelect();
+    }
+
+    static async loadInitialData() {
+        try {
+            await Promise.all([
+                this.loadModels(),
+                this.loadVoices(),
+                this.loadFormats(),
+                this.loadF0Methods(),
+                this.loadHubertModels()
+            ]);
+            NotificationManager.show('Данные успешно загружены', 'success');
+        } catch (error) {
+            console.error('Ошибка загрузки данных:', error);
+            NotificationManager.show('Ошибка загрузки данных: ' + error.message, 'error');
+        }
+    }
+}
+
+// === UI МЕНЕДЖЕР ===
+class UIManager {
+    static updateModelSelects() {
+        const selects = ['rvc-model', 'tts-rvc-model'];
+        const defaultOption = `<option value="">${appState.i18n.select_model || 'Выберите модель'}</option>`;
+        
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = defaultOption + appState.models.map(model => 
+                    `<option value="${model}">${model}</option>`
+                ).join('');
+            }
+        });
+    }
+
+    static updateVoiceSelect() {
+        const select = document.getElementById('tts-voice');
+        if (!select) return;
+
+        const defaultOption = `<option value="">${appState.i18n.select_voice || 'Выберите голос'}</option>`;
+        const optgroups = Object.keys(appState.voices).map(language => {
+            const options = appState.voices[language].map(voice => 
+                `<option value="${voice}">${voice}</option>`
+            ).join('');
+            return `<optgroup label="${language}">${options}</optgroup>`;
+        }).join('');
+
+        select.innerHTML = defaultOption + optgroups;
+    }
+
+    static updateFormatSelects() {
+        const select = document.getElementById('output-format');
+        if (select) {
+            select.innerHTML = appState.formats.map(format => 
+                `<option value="${format}">${format.toUpperCase()}</option>`
+            ).join('');
+        }
+    }
+
+    static updateF0MethodSelect() {
+        const select = document.getElementById('f0-method');
+        if (select && appState.f0Methods.length > 0) {
+            select.innerHTML = appState.f0Methods.map(method => 
+                `<option value="${method}">${method}</option>`
+            ).join('');
+        }
+    }
+
+    static updateHubertSelect() {
+        const select = document.getElementById('hubert-model');
+        if (select) {
+            const defaultOption = `<option value="">${appState.i18n.select_hubert_model || 'Выберите HuBERT модель'}</option>`;
+            select.innerHTML = defaultOption + appState.hubertModels.map(model => 
+                `<option value="${model}">${model}</option>`
+            ).join('');
+        }
+    }
+
+    static setupSliders() {
+        const sliders = [
+            { id: 'rvc-pitch', valueId: 'rvc-pitch-value' },
+            { id: 'protect', valueId: 'protect-value' },
+            { id: 'index-rate', valueId: 'index-rate-value' },
+            { id: 'volume-envelope', valueId: 'volume-envelope-value' },
+            { id: 'tts-rate', valueId: 'tts-rate-value' },
+            { id: 'tts-volume', valueId: 'tts-volume-value' },
+            { id: 'tts-rvc-pitch', valueId: 'tts-rvc-pitch-value' },
+            { id: 'tts-protect', valueId: 'tts-protect-value' }
+        ];
+
+        sliders.forEach(({ id, valueId }) => {
+            const slider = document.getElementById(id);
+            const valueElement = document.getElementById(valueId);
+
+            if (slider && valueElement) {
+                valueElement.textContent = slider.value;
+                slider.addEventListener('input', () => {
+                    valueElement.textContent = slider.value;
+                });
+            }
+        });
+    }
+
+    static showResult(result) {
+        const { type } = result;
+        const resultArea = document.getElementById(`${type}-result`);
+        const resultContent = document.getElementById(`${type}-result-content`);
+        const playerContainerId = `${type}-audio-player`;
+
+        if (!resultArea || !resultContent) return;
+
+        let html = '';
+        if (type === 'voice-conversion') {
+            const titleText = appState.currentLang === 'ru' ? 'Преобразование голоса завершено' : 'Voice conversion completed';
+            const fileText = appState.currentLang === 'ru' ? 'Выходной файл:' : 'Output file:';
+            html = `
+                <h4>${titleText}</h4>
+                <p><strong>${fileText}</strong> ${result.outputPath}</p>
+                <div class="audio-player-container" id="${playerContainerId}"></div>
+            `;
+        } else if (type === 'tts-conversion') {
+            const titleText = appState.currentLang === 'ru' ? 'Синтез и преобразование завершены' : 'Synthesis and conversion completed';
+            const synthText = appState.currentLang === 'ru' ? 'Синтезированная речь:' : 'Synthesized speech:';
+            const convertedText = appState.currentLang === 'ru' ? 'Преобразованный голос:' : 'Converted voice:';
+            html = `
+                <h4>${titleText}</h4>
+                <p><strong>${synthText}</strong> ${result.synthPath}</p>
+                <p><strong>${convertedText}</strong> ${result.convertedPath}</p>
+                <div class="audio-player-container" id="${playerContainerId}"></div>
+            `;
+        }
+
+        resultContent.innerHTML = html;
+        resultArea.classList.remove('hidden');
+
+        // Очистка предыдущих плееров
+        if (type === 'voice-conversion' && appState.voiceConversionPlayer) {
+            appState.voiceConversionPlayer.destroy();
+            appState.voiceConversionPlayer = null;
+        } else if (type === 'tts-conversion' && appState.ttsConversionPlayer) {
+            appState.ttsConversionPlayer.destroy();
+            appState.ttsConversionPlayer = null;
+        }
+
+        // Создание нового плеера
+        if (result.downloadUrl) {
+            setTimeout(() => {
+                const playerContainer = document.getElementById(playerContainerId);
+                if (playerContainer) {
+                    const newPlayer = new AudioPlayer(playerContainer);
+                    // Добавляем timestamp к URL для принудительного обновления кэша
+                    const cacheBustUrl = `${result.downloadUrl}?t=${Date.now()}`;
+                    newPlayer.loadAudio(cacheBustUrl, result.outputPath || 'result.mp3');
+
+                    if (type === 'voice-conversion') {
+                        appState.voiceConversionPlayer = newPlayer;
+                    } else if (type === 'tts-conversion') {
+                        appState.ttsConversionPlayer = newPlayer;
+                    }
+
+                    appState.currentAudioPlayer = newPlayer;
+                }
+            }, 100);
+        }
+
+        resultArea.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// === ОБРАБОТЧИКИ СОБЫТИЙ ===
+class EventHandlers {
+    static setupTabNavigation() {
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+
+                // Переключение активных элементов
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.result-area').forEach(area => area.classList.add('hidden'));
+
+                button.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+
+                // Показ результатов для активной вкладки
+                this.showTabResults(targetTab);
+            });
+        });
+    }
+
+    static showTabResults(targetTab) {
+        if (targetTab === 'voice-conversion') {
+            const voiceResult = document.getElementById('voice-conversion-result');
+            if (voiceResult && voiceResult.querySelector('.result-content').innerHTML.trim() !== '') {
+                voiceResult.classList.remove('hidden');
+            }
+            if (appState.voiceConversionPlayer) {
+                appState.currentAudioPlayer = appState.voiceConversionPlayer;
+            }
+        } else if (targetTab === 'tts-conversion') {
+            const ttsResult = document.getElementById('tts-conversion-result');
+            if (ttsResult && ttsResult.querySelector('.result-content').innerHTML.trim() !== '') {
+                ttsResult.classList.remove('hidden');
+            }
+            if (appState.ttsConversionPlayer) {
+                appState.currentAudioPlayer = appState.ttsConversionPlayer;
+            }
+        }
+    }
+
+    static setupFileInputs() {
+        const audioFileInput = document.getElementById('audio-file');
+        const removeAudioBtn = document.getElementById('remove-audio-file');
+        const zipFileInput = document.getElementById('zip-file');
+
+        if (audioFileInput) {
+            audioFileInput.addEventListener('change', async function() {
+                if (this.files.length > 0) {
+                    await FileManager.uploadAudioFile(this.files[0]);
+                } else {
+                    FileManager.resetFileInput();
+                    appState.uploadedAudioFile = null;
+                }
+            });
+        }
+
+        if (removeAudioBtn) {
+            removeAudioBtn.addEventListener('click', () => FileManager.removeUploadedAudioFile());
+        }
+
+        if (zipFileInput) {
+            zipFileInput.addEventListener('change', function() {
+                const label = this.nextElementSibling;
+                const textElement = label.querySelector('.file-text');
+
+                if (this.files.length > 0) {
+                    const file = this.files[0];
+                    const validation = Utils.validateFile(file, {
+                        allowedTypes: CONFIG.SUPPORTED_ZIP_TYPES
+                    });
+
+                    if (validation.valid) {
+                        textElement.textContent = file.name;
+                        label.style.borderColor = 'var(--primary-color)';
+                    } else {
+                        NotificationManager.show(validation.errors[0], 'error');
+                        this.value = '';
+                        textElement.textContent = appState.getMessage('selectZipFile');
+                        label.style.borderColor = 'var(--border-color)';
+                    }
+                } else {
+                    textElement.textContent = appState.getMessage('selectZipFile');
+                    label.style.borderColor = 'var(--border-color)';
+                }
+            });
+        }
+    }
+
+    static setupForms() {
+        const forms = [
+            { id: 'voice-conversion-form', handler: this.handleVoiceConversion },
+            { id: 'tts-conversion-form', handler: this.handleTTSConversion },
+            { id: 'download-model-form', handler: this.handleDownloadModel },
+            { id: 'upload-zip-form', handler: this.handleUploadZip },
+            { id: 'hubert-form', handler: this.handleInstallHubert }
+        ];
+
+        forms.forEach(({ id, handler }) => {
+            const form = document.getElementById(id);
+            if (form) {
+                form.addEventListener('submit', handler.bind(this));
+            }
+        });
+
+        // Кнопки обновления
+        const refreshButtons = [
+            { id: 'refresh-rvc-models', handler: this.handleRefreshModels },
+            { id: 'refresh-tts-models', handler: this.handleRefreshModels }
+        ];
+
+        refreshButtons.forEach(({ id, handler }) => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.addEventListener('click', handler.bind(this));
+            }
+        });
+
+        this.setupAutopitchAutotune();
+    }
+
+    static setupAutopitchAutotune() {
+        const autopitchCheckbox = document.getElementById('autopitch');
+        const autotuneCheckbox = document.getElementById('autotune');
+        const autopitchSettings = document.getElementById('autopitch-settings');
+        const autotuneSettings = document.getElementById('autotune-settings');
+        const pitchSlider = document.getElementById('rvc-pitch');
+        const pitchGroup = pitchSlider?.closest('.form-group');
+
+        if (autopitchCheckbox && autopitchSettings) {
+            autopitchCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                autopitchSettings.style.display = isChecked ? 'block' : 'none';
+
+                if (pitchGroup) {
+                    Object.assign(pitchGroup.style, {
+                        visibility: isChecked ? 'hidden' : 'visible',
+                        height: isChecked ? '0' : 'auto',
+                        overflow: isChecked ? 'hidden' : 'visible',
+                        marginBottom: isChecked ? '0' : ''
+                    });
+                }
+
+                if (isChecked && pitchSlider) {
+                    pitchSlider.value = '0';
+                    const pitchValue = document.getElementById('rvc-pitch-value');
+                    if (pitchValue) pitchValue.textContent = '0';
+                }
+            });
+        }
+
+        if (autotuneCheckbox && autotuneSettings) {
+            autotuneCheckbox.addEventListener('change', function() {
+                autotuneSettings.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+
+        // Настройка слайдеров autopitch и autotune
+        const sliders = [
+            { id: 'autopitch-threshold', valueId: 'autopitch-threshold-value' },
+            { id: 'autotune-strength', valueId: 'autotune-strength-value' }
+        ];
+
+        sliders.forEach(({ id, valueId }) => {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(valueId);
+            if (slider && valueDisplay) {
+                slider.addEventListener('input', function() {
+                    valueDisplay.textContent = this.value;
+                });
+            }
+        });
+    }
+
+    static async handleVoiceConversion(event) {
+        event.preventDefault();
+
+        if (!appState.uploadedAudioFile) {
+            NotificationManager.show(appState.getMessage('selectAudioFirst'), 'error');
+            return;
+        }
+
+        if (appState.currentAudioPlayer) {
+            appState.currentAudioPlayer.destroy();
+            appState.currentAudioPlayer = null;
+        }
+
+        const formData = new FormData(event.target);
+        formData.set('audio_file_path', appState.uploadedAudioFile.path);
+
+        // Настройки autopitch и autotune
+        const autopitchChecked = document.getElementById('autopitch').checked;
+        const autotuneChecked = document.getElementById('autotune').checked;
+
+        formData.set('autopitch', autopitchChecked ? 'true' : 'false');
+        formData.set('autotune', autotuneChecked ? 'true' : 'false');
+        formData.set('autopitch_threshold', autopitchChecked ? 
+            document.getElementById('autopitch-threshold').value : '155.0');
+        formData.set('autotune_strength', autotuneChecked ? 
+            document.getElementById('autotune-strength').value : '1.0');
+
+        ProgressManager.clearFileInfo('voice-conversion-progress');
+        ProgressManager.show('voice-conversion-progress');
+        const progressInterval = ProgressManager.startRealTimeProgress('voice-conversion-progress');
+
+        try {
+            const response = await fetch('/api/voice-conversion', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            clearInterval(progressInterval);
+
+            if (data.success) {
+                ProgressManager.updateRealTimeProgress('voice-conversion-progress', {
+                    progress: 1.0,
+                    current_step: 8,
+                    total_steps: 8,
+                    step_name: appState.currentLang === 'ru' ? 'Завершено' : 'Completed',
+                    description: appState.currentLang === 'ru' ? 'Конвертация завершена' : 'Conversion completed'
+                });
+
+                UIManager.showResult({
+                    type: 'voice-conversion',
+                    outputPath: data.output_path,
+                    downloadUrl: data.download_url
+                });
+
+                NotificationManager.show(appState.getMessage('voiceConversionComplete'), 'success');
+                ProgressManager.hide('voice-conversion-progress', 2000);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            clearInterval(progressInterval);
+            console.error('Ошибка преобразования:', error);
+            NotificationManager.show(`${appState.getMessage('conversionError')}: ${error.message}`, 'error');
+            ProgressManager.hide('voice-conversion-progress', 1000);
+        }
+    }
+
+    static async handleTTSConversion(event) {
+        event.preventDefault();
+
+        if (appState.currentAudioPlayer) {
+            appState.currentAudioPlayer.destroy();
+            appState.currentAudioPlayer = null;
+        }
+
+        const formData = new FormData(event.target);
+        const requestData = Object.fromEntries(formData.entries());
+
+        try {
+            ProgressManager.show('tts-synthesis-progress');
+
+            const response = await fetch('/api/tts-conversion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                ProgressManager.hide('tts-synthesis-progress');
+                ProgressManager.clearFileInfo('tts-conversion-progress');
+                ProgressManager.show('tts-conversion-progress');
+
+                await this.simulateConversionProgress('tts-conversion-progress');
+
+                UIManager.showResult({
+                    type: 'tts-conversion',
+                    synthPath: data.synth_path,
+                    convertedPath: data.converted_path,
+                    downloadUrl: data.download_url
+                });
+
+                NotificationManager.show(appState.getMessage('ttsConversionComplete'), 'success');
+                ProgressManager.hide('tts-conversion-progress', 2000);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка TTS преобразования:', error);
+            NotificationManager.show(`${appState.getMessage('ttsConversionError')}: ${error.message}`, 'error');
+            ProgressManager.hide('tts-synthesis-progress', 1000);
+            ProgressManager.hide('tts-conversion-progress', 1000);
+        }
+    }
+
+    static async simulateConversionProgress(progressId) {
+        const fileName = appState.uploadedAudioFile ? appState.uploadedAudioFile.name : 'audio_file';
+        const shortFileName = fileName.length > 30 ? fileName.substring(0, 30) + '...' : fileName;
+
+        const steps = [
+            { progress: 0, current: 0, total: 2, elapsed: 0, text: appState.currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+            { progress: 25, current: 0, total: 2, elapsed: 1, text: appState.currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+            { progress: 50, current: 1, total: 2, elapsed: 2, text: appState.currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+            { progress: 75, current: 1, total: 2, elapsed: 3, text: appState.currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' },
+            { progress: 100, current: 2, total: 2, elapsed: 5, text: appState.currentLang === 'ru' ? 'Преобразование аудио' : 'Converting audio' }
+        ];
+
+        for (const step of steps) {
+            const details = { loaded: step.current, total: step.total };
+            ProgressManager.update(progressId, step.progress, step.progress === 100 ? 'complete' : 'processing', details);
+
+            const element = document.getElementById(progressId);
+            if (element) {
+                const progressSizeValue = element.querySelector('.progress-size-value');
+                if (progressSizeValue) {
+                    progressSizeValue.textContent = `${step.current} / ${step.total}`;
+                }
+
+                const statusText = element.querySelector('.progress-status-text');
+                if (statusText) {
+                    const remaining = step.total - step.current;
+                    const timeRemaining = remaining > 0 ? `00:0${Math.max(0, 5 - step.elapsed)}` : '00:00';
+                    const speed = step.elapsed > 0 ? (step.elapsed / Math.max(1, step.current)).toFixed(2) : '0.00';
+                    const statusMessage = `[🌌] ${step.text} — ${shortFileName}\nКонвертация: ${step.progress}% ${step.current}/${step.total} [00:0${step.elapsed}<${timeRemaining}, ${speed}s/steps]`;
+                    statusText.textContent = statusMessage;
+                }
+            }
+
+            await Utils.delay(800 + Math.random() * 400);
+        }
+    }
+
+    static async handleDownloadModel(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const requestData = {
+            url: formData.get('url'),
+            model_name: formData.get('model_name')
+        };
+
+        const progressId = 'model-download-progress';
+        ProgressManager.show(progressId);
+        ProgressManager.updateFileInfo(progressId, requestData.model_name, 
+            appState.currentLang === 'ru' ? 'Загрузка...' : 'Downloading...');
+
+        try {
+            const response = await fetch('/api/download-model', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                ProgressManager.update(progressId, 100, 'complete');
+                NotificationManager.show(appState.getMessage('modelDownloadSuccess'), 'success');
+                await ApiManager.loadModels();
+                event.target.reset();
+                ProgressManager.hide(progressId, 2000);
+            } else {
+                ProgressManager.update(progressId, 0, 'error');
+                ProgressManager.hide(progressId, 1000);
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки модели:', error);
+            ProgressManager.update(progressId, 0, 'error');
+            ProgressManager.hide(progressId, 1000);
+            NotificationManager.show(`${appState.getMessage('modelDownloadError')}: ${error.message}`, 'error');
+        }
+    }
+
+    static async handleUploadZip(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const modelFile = formData.get('model_file');
+        const modelName = formData.get('model_name');
+
+        if (!modelFile || modelFile.size === 0) {
+            NotificationManager.show(appState.getMessage('selectZipFirst'), 'error');
+            return;
+        }
+
+        if (!modelName || modelName.trim() === '') {
+            NotificationManager.show(appState.getMessage('enterModelName'), 'error');
+            return;
+        }
+
+        const validation = Utils.validateFile(modelFile, {
+            allowedTypes: CONFIG.SUPPORTED_ZIP_TYPES
+        });
+
+        if (!validation.valid) {
+            NotificationManager.show(validation.errors[0], 'error');
+            return;
+        }
+
+        ProgressManager.show('zip-upload-progress', modelFile);
+
+        try {
+            const response = await FileManager.upload('/api/upload-model-zip', formData, 'zip-upload-progress');
+            const data = await response.json();
+
+            if (data.success) {
+                NotificationManager.show(appState.getMessage('zipUploadSuccess'), 'success');
+                await ApiManager.loadModels();
+                event.target.reset();
+
+                const fileLabel = document.querySelector('#zip-file + .file-label .file-text');
+                if (fileLabel) {
+                    fileLabel.textContent = appState.getMessage('selectZipFile');
+                }
+                ProgressManager.hide('zip-upload-progress', 2000);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки ZIP:', error);
+            NotificationManager.show(`${appState.getMessage('zipUploadError')}: ${error.message}`, 'error');
+            ProgressManager.hide('zip-upload-progress', 1000);
+        }
+    }
+
+    static async handleInstallHubert(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const requestData = {
+            model_name: formData.get('model_name'),
+            custom_url: formData.get('custom_url') || null
+        };
+
+        try {
+            const response = await fetch('/api/install-hubert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                NotificationManager.show(appState.getMessage('hubertInstallSuccess'), 'success');
+                event.target.reset();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Ошибка установки HuBERT:', error);
+            NotificationManager.show(`${appState.getMessage('hubertInstallError')}: ${error.message}`, 'error');
+        }
+    }
+
+    static async handleRefreshModels(event) {
+        const refreshBtn = event.target.closest('button');
+        const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+
+        refreshIcon.style.transform = 'rotate(360deg)';
+        refreshBtn.disabled = true;
+
+        try {
+            await ApiManager.loadModels();
+            NotificationManager.show(appState.getMessage('modelsListUpdated'), 'success');
+        } catch (error) {
+            NotificationManager.show(appState.getMessage('modelsUpdateError') || 'Error updating models', 'error');
+        } finally {
+            setTimeout(() => {
+                refreshIcon.style.transform = '';
+                refreshBtn.disabled = false;
+            }, CONFIG.ANIMATION_DELAY);
+        }
+    }
+
+    static initializeLanguageSwitcher() {
+        const languageSelect = document.getElementById('language-select');
+
+        if (languageSelect) {
+            languageSelect.value = appState.currentLang;
+            languageSelect.addEventListener('change', (event) => {
+                this.switchLanguage(event.target.value);
+            });
+        }
+    }
+
+    static switchLanguage(lang) {
+        if (lang === appState.currentLang) return;
+
+        fetch('/api/set-language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language: lang })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                NotificationManager.show(data.error || 'Ошибка переключения языка', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка переключения языка:', error);
+            NotificationManager.show('Ошибка переключения языка', 'error');
+        });
+    }
+}
+
+// === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
+class App {
+    static async initialize() {
+        try {
+            EventHandlers.setupTabNavigation();
+            UIManager.setupSliders();
+            EventHandlers.setupFileInputs();
+            EventHandlers.setupForms();
+            EventHandlers.initializeLanguageSwitcher();
+            await ApiManager.loadInitialData();
+        } catch (error) {
+            console.error('Ошибка инициализации приложения:', error);
+            NotificationManager.show('Ошибка инициализации приложения', 'error');
+        }
+    }
+}
+
+// === ЗАПУСК ПРИЛОЖЕНИЯ ===
+document.addEventListener('DOMContentLoaded', () => {
+    App.initialize();
+});

@@ -76,7 +76,10 @@ class AudioPlayer {
     loadAudio(audioUrl, filename = 'audio') {
         if (this.audio) {
             this.audio.pause();
-            URL.revokeObjectURL(this.audio.src);
+            // Освобождаем URL только если это blob URL
+            if (this.audio.src.startsWith('blob:')) {
+                URL.revokeObjectURL(this.audio.src);
+            }
         }
         
         this.audio = new Audio(audioUrl);
@@ -313,7 +316,9 @@ class AudioPlayer {
         if (!this.audio) return;
         
         const link = document.createElement('a');
-        link.href = this.audio.src;
+        // Убираем timestamp параметр из URL для скачивания
+        const cleanUrl = this.audio.src.split('?')[0];
+        link.href = cleanUrl;
         link.download = this.filename || 'audio.mp3';
         document.body.appendChild(link);
         link.click();
@@ -329,7 +334,11 @@ class AudioPlayer {
     destroy() {
         if (this.audio) {
             this.audio.pause();
-            URL.revokeObjectURL(this.audio.src);
+            // Освобождаем URL только если это blob URL
+            if (this.audio.src.startsWith('blob:')) {
+                URL.revokeObjectURL(this.audio.src);
+            }
+            this.audio = null;
         }
         
         if (this.animationFrame) {

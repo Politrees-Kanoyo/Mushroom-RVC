@@ -13,6 +13,7 @@ import time
 import threading
 import subprocess
 import urllib.request
+import gc
 from flask import Flask, render_template, request, jsonify, send_file, stream_template
 from flask_cloudflared import run_with_cloudflared
 from werkzeug.utils import secure_filename
@@ -23,13 +24,14 @@ from web.api import (
     text_to_speech_conversion,
     download_model_from_url,
     upload_model_zip,
-    upload_model_files,
     install_hubert_model,
     get_available_models,
     get_available_voices,
     get_output_formats,
     convert_audio_format,
-    synthesize_speech
+    synthesize_speech,
+    validate_file_exists,    # Безопасная проверка существования файлов
+    current_conversion_progress # Глобальная переменная для отслеживания прогресса
 )
 
 CURRENT_LANGUAGE = 'ru'  
@@ -213,7 +215,7 @@ def save_uploaded_file(file, upload_folder, allowed_extensions):
 def cleanup_temp_file(file_path):
     """Безопасное удаление временного файла"""
     try:
-        if file_path and os.path.exists(file_path):
+        if file_path and validate_file_exists(file_path):
             os.remove(file_path)
             print(f"[DEBUG] Временный файл удален: {file_path}")
     except Exception as e:
@@ -397,7 +399,7 @@ def api_remove_audio():
         if not file_path:
             return jsonify({'success': False, 'error': 'Путь к файлу не указан'})
         
-        if os.path.exists(file_path) and os.path.abspath(file_path).startswith(os.path.abspath(UPLOAD_FOLDER)):
+        if validate_file_exists(file_path) and os.path.abspath(file_path).startswith(os.path.abspath(UPLOAD_FOLDER)):
             os.remove(file_path)
             return jsonify({'success': True, 'message': 'Файл успешно удален'})
         else:
@@ -434,7 +436,7 @@ def api_voice_conversion():
     try:
         if 'audio_file_path' in request.form:
             input_path = request.form.get('audio_file_path')
-            if not os.path.exists(input_path):
+            if not validate_file_exists(input_path):
                 return jsonify({'success': False, 'error': 'Загруженный файл не найден'})
         elif 'audio_file' in request.files:
             file = request.files['audio_file']
@@ -475,7 +477,9 @@ def api_voice_conversion():
             output_format=output_format
         )
         
-  
+        # Очистка памяти после конвертации
+        gc.collect()
+        
         return jsonify({
             'success': True,
             'output_path': output_path,
@@ -520,6 +524,9 @@ def api_tts_conversion():
             volume_envelope=volume_envelope,
             output_format=output_format
         )
+        
+        # Очистка памяти после конвертации
+        gc.collect()
         
         return jsonify({
             'success': True,
@@ -610,7 +617,7 @@ def download_file(filename):
         output_dir = 'output/RVC_output'
         file_path = os.path.join(output_dir, filename)
         
-        if os.path.exists(file_path):
+        if validate_file_exists(file_path):
             return send_file(file_path, as_attachment=True)
         else:
             return jsonify({'error': 'Файл не найден'}), 404
