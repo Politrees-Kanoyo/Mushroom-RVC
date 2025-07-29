@@ -14,7 +14,6 @@ from rvc.infer.config import Config
 from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.audio import load_audio
-
 from rvc.modules.FlashSR import upscale
 
 # Определяем пути к папкам и файлам (константы)
@@ -35,25 +34,28 @@ def display_progress(percent, message, is_print, progress=gr.Progress()):
     if is_print:
         print(message)
     progress(percent, desc=message)
-    
+
     # Обновляем глобальный прогресс для веб-интерфейса
     try:
         import sys
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
         from web.api import current_conversion_progress
-        
+
         # Вычисляем текущий шаг на основе процента (всего 8 шагов в rvc_infer)
         total_steps = 8
         current_step = min(int(percent * total_steps), total_steps)
-        
+
         # Обновляем прогресс для веб-интерфейса
-        current_conversion_progress.update({
-            'progress': percent,
-            'current_step': current_step,
-            'total_steps': total_steps,
-            'step_name': 'RVC Inference',
-            'description': message
-        })
+        current_conversion_progress.update(
+            {
+                "progress": percent,
+                "current_step": current_step,
+                "total_steps": total_steps,
+                "step_name": "RVC Inference",
+                "description": message,
+            }
+        )
     except ImportError:
         # Если не удается импортировать, просто продолжаем без обновления веб-прогресса
         pass
@@ -174,16 +176,19 @@ def rvc_infer(
     # Инициализируем прогресс для веб-интерфейса
     try:
         import sys
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
         from web.api import current_conversion_progress
-        
-        current_conversion_progress.update({
-            'progress': 0.0,
-            'current_step': 0,
-            'total_steps': 8,
-            'step_name': 'RVC Inference',
-            'description': 'Начинаем конвертацию голоса'
-        })
+
+        current_conversion_progress.update(
+            {
+                "progress": 0.0,
+                "current_step": 0,
+                "total_steps": 8,
+                "step_name": "RVC Inference",
+                "description": "Начинаем конвертацию голоса",
+            }
+        )
     except ImportError:
         pass
 
@@ -283,16 +288,19 @@ def rvc_edgetts_infer(
     # Инициализируем прогресс для веб-интерфейса
     try:
         import sys
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
         from web.api import current_conversion_progress
-        
-        current_conversion_progress.update({
-            'progress': 0.0,
-            'current_step': 0,
-            'total_steps': 9,  # 1 шаг TTS + 8 шагов RVC
-            'step_name': 'TTS + RVC Inference',
-            'description': 'Начинаем синтез речи и конвертацию голоса'
-        })
+
+        current_conversion_progress.update(
+            {
+                "progress": 0.0,
+                "current_step": 0,
+                "total_steps": 9,  # 1 шаг TTS + 8 шагов RVC
+                "step_name": "TTS + RVC Inference",
+                "description": "Начинаем синтез речи и конвертацию голоса",
+            }
+        )
     except ImportError:
         pass
 
