@@ -15,6 +15,8 @@ from rvc.infer.pipeline import VC
 from rvc.lib.algorithm.synthesizers import Synthesizer
 from rvc.lib.audio import load_audio
 
+from rvc.modules.FlashSR import upscale
+
 # Определяем пути к папкам и файлам (константы)
 RVC_MODELS_DIR = os.path.join(os.getcwd(), "models", "RVC_models")
 OUTPUT_DIR = os.path.join(os.getcwd(), "output", "RVC_output")
@@ -161,6 +163,7 @@ def rvc_infer(
     autotune=False,
     autotune_strength=1.0,
     output_format="wav",
+    audio_upscaling=False,  # FlashSR
     progress=gr.Progress(track_tqdm=True),
 ):
     if not rvc_model:
@@ -233,8 +236,12 @@ def rvc_infer(
     wavfile.write(output_path, tgt_sr, audio_opt)
     convert_audio(output_path, output_path, output_format)
 
+    if audio_upscaling:
+        display_progress(0.9, "[🚀] Улучшение качества аудио...", True)
+        upscale(output_path, OUTPUT_DIR, 2, config.device)
+
     # Освобождаем память
-    display_progress(0.9, "Освобождаем память...", False)
+    display_progress(0.95, "Освобождаем память...", False)
     del hubert_model, cpt, net_g, vc
     gc.collect()
     torch.cuda.empty_cache()
@@ -264,6 +271,8 @@ def rvc_edgetts_infer(
     tts_rate=0,
     tts_volume=0,
     tts_pitch=0,
+    # FlashSR
+    audio_upscaling=False,
     progress=gr.Progress(track_tqdm=True),
 ):
     if not tts_text:
@@ -306,6 +315,7 @@ def rvc_edgetts_infer(
         autotune=autotune,
         autotune_strength=autotune_strength,
         output_format=output_format,
+        audio_upscaling=audio_upscaling,
     )
 
     return input_path, output_path
