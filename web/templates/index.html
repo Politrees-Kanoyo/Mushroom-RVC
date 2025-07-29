@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ i18n.title }}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/audio-player.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='audio-player.css') }}">
 </head>
 <body>
     <div class="container">
@@ -18,8 +18,10 @@
             <h1 class="title">🍄 {{ i18n.title }}</h1>
             <p class="subtitle">{{ 'Минималистичный интерфейс для преобразования голоса' if lang == 'ru' else 'Minimalist interface for voice conversion' }}</p>
             <div class="language-switcher">
-                <button class="lang-btn" data-lang="ru" title="Русский">🇷🇺</button>
-                <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+                <select id="language-select" class="language-dropdown">
+                    <option value="ru" {{ 'selected' if lang == 'ru' else '' }}>Русский</option>
+                    <option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option>
+                </select>
             </div>
         </header>
 
@@ -74,9 +76,6 @@
                         </div>
                     </div>
 
-                    <!-- Загрузка аудиофайла -->
-                    <div class="form-group">
-                        <label for="audio-file" class="label">{{ i18n.upload_audio }}</label>
                         <div class="file-input-wrapper">
                             <input type="file" id="audio-file" name="audio_file" class="file-input" accept=".wav,.mp3,.flac,.ogg,.m4a,.aiff,.ac3" required>
                             <label for="audio-file" class="file-label">
@@ -88,7 +87,41 @@
                                     <line x1="16" y1="17" x2="8" y2="17"/>
                                     <polyline points="10,9 9,9 8,9"/>
                                 </svg>
+                                <button type="button" id="remove-audio-file" class="remove-file-btn hidden" title="{{ 'Удалить файл' if lang == 'ru' else 'Remove file' }}">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
                             </label>
+                        </div>
+                        <!-- Прогресс-бар для загрузки аудио -->
+                        <div id="voice-upload-progress" class="upload-progress hidden">
+                            <div class="progress-file-info">
+                                <span class="progress-file-name">{{ 'Выберите файл' if lang == 'ru' else 'Select file' }}</span>
+                                <span class="progress-file-size">0 MB</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="progress-percentage">0%</span>
+                                <div class="progress-status">
+                                    <span class="loading-spinner"></span>
+                                    <span class="progress-status-text">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                                    <button class="progress-cancel" type="button">{{ 'Отмена' if lang == 'ru' else 'Cancel' }}</button>
+                                </div>
+                            </div>
+                            <div class="progress-details">
+                                <div class="progress-speed">
+                                    <span>{{ 'Скорость:' if lang == 'ru' else 'Speed:' }}</span>
+                                    <span class="progress-speed-value">0 MB/s</span>
+                                </div>
+                                <div class="progress-eta">
+                                    <span>{{ 'Осталось:' if lang == 'ru' else 'ETA:' }}</span>
+                                    <span class="progress-eta-value">--:--</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -131,6 +164,11 @@
                         <input type="range" id="index-rate" name="index_rate" class="slider" min="0" max="1" step="0.01" value="0.7">
                     </div>
 
+                    <div class="form-group">
+                        <label for="volume-envelope" class="label">{{ i18n.volume_envelope }}: <span id="volume-envelope-value">1.0</span></label>
+                        <input type="range" id="volume-envelope" name="volume_envelope" class="slider" min="0" max="1" step="0.01" value="1.0">
+                    </div>
+
                     <!-- Дополнительные настройки -->
                     <details class="details">
                         <summary class="details-summary">{{ i18n.advanced_settings }}</summary>
@@ -144,11 +182,6 @@
                                     <label for="f0-max" class="label">{{ i18n.f0_max }}</label>
                                     <input type="number" id="f0-max" name="f0_max" class="input" min="380" max="16000" value="1100">
                                 </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="volume-envelope" class="label">{{ i18n.volume_envelope }}: <span id="volume-envelope-value">1.0</span></label>
-                                <input type="range" id="volume-envelope" name="volume_envelope" class="slider" min="0" max="1" step="0.01" value="1.0">
                             </div>
 
                             <div class="checkbox-group">
@@ -186,6 +219,35 @@
                         {{ i18n.convert }}
                     </button>
                 </form>
+                
+                <!-- Прогресс-бар для процесса конвертации -->
+                <div id="voice-conversion-progress" class="upload-progress hidden">
+                    <div class="progress-file-info">
+                        <span class="progress-filename">{{ 'Конвертация аудио' if lang == 'ru' else 'Audio conversion' }}</span>
+                        <span class="progress-filesize"></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span class="progress-percentage">0%</span>
+                        <div class="progress-status">
+                            <span class="loading-spinner"></span>
+                            <span class="progress-status-text">{{ 'Обработка...' if lang == 'ru' else 'Processing...' }}</span>
+                            <button class="progress-cancel" type="button">{{ 'Отмена' if lang == 'ru' else 'Cancel' }}</button>
+                        </div>
+                    </div>
+                    <div class="progress-details">
+                        <div class="progress-size">
+                            <span>{{ 'Обработано:' if lang == 'ru' else 'Processed:' }}</span>
+                            <span class="progress-size-value">0 / 0</span>
+                        </div>
+                        <div class="progress-eta">
+                            <span>{{ 'Осталось:' if lang == 'ru' else 'ETA:' }}</span>
+                            <span class="progress-eta-value">--:--</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Область результатов для преобразования голоса -->
@@ -263,6 +325,42 @@
                         </svg>
                         {{ i18n.synthesize_convert }}
                     </button>
+                    
+                    <!-- Прогресс-бар для синтеза речи -->
+                    <div id="tts-synthesis-progress" class="upload-progress hidden">
+                        <div class="progress-file-info">
+                            <span class="progress-file-name">{{ 'Синтез речи' if lang == 'ru' else 'Speech synthesis' }}</span>
+                            <span class="progress-file-size">{{ 'Обработка...' if lang == 'ru' else 'Processing...' }}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span class="progress-percentage">0%</span>
+                            <div class="progress-status">
+                                <span class="loading-spinner"></span>
+                                <span class="progress-status-text">{{ 'Синтез...' if lang == 'ru' else 'Synthesizing...' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Прогресс-бар для конвертации TTS -->
+                    <div id="tts-conversion-progress" class="upload-progress hidden">
+                        <div class="progress-file-info">
+                            <span class="progress-file-name">{{ 'Конвертация голоса' if lang == 'ru' else 'Voice conversion' }}</span>
+                            <span class="progress-file-size">{{ 'Обработка...' if lang == 'ru' else 'Processing...' }}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span class="progress-percentage">0%</span>
+                            <div class="progress-status">
+                                <span class="loading-spinner"></span>
+                                <span class="progress-status-text">{{ 'Конвертация...' if lang == 'ru' else 'Converting...' }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
             
@@ -300,6 +398,24 @@
                             </svg>
                             {{ i18n.download }}
                         </button>
+                        
+                        <!-- Прогресс-бар для загрузки модели по URL -->
+                        <div id="model-download-progress" class="upload-progress hidden">
+                            <div class="progress-file-info">
+                                <span class="progress-file-name">{{ 'Загрузка модели' if lang == 'ru' else 'Downloading model' }}</span>
+                                <span class="progress-file-size">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="progress-percentage">0%</span>
+                                <div class="progress-status">
+                                    <span class="loading-spinner"></span>
+                                    <span class="progress-status-text">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
 
@@ -322,6 +438,34 @@
                                     </svg>
                                 </label>
                             </div>
+                            <!-- Прогресс-бар для загрузки ZIP -->
+                            <div id="zip-upload-progress" class="upload-progress hidden">
+                            <div class="progress-file-info">
+                                <span class="progress-file-name">{{ 'Выберите ZIP файл' if lang == 'ru' else 'Select ZIP file' }}</span>
+                                <span class="progress-file-size">0 MB</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="progress-percentage">0%</span>
+                                <div class="progress-status">
+                                    <span class="loading-spinner"></span>
+                                    <span class="progress-status-text">{{ 'Подготовка...' if lang == 'ru' else 'Preparing...' }}</span>
+                                    <button class="progress-cancel" type="button">{{ 'Отмена' if lang == 'ru' else 'Cancel' }}</button>
+                                </div>
+                            </div>
+                            <div class="progress-details">
+                                <div class="progress-speed">
+                                    <span>{{ 'Скорость:' if lang == 'ru' else 'Speed:' }}</span>
+                                    <span class="progress-speed-value">0 MB/s</span>
+                                </div>
+                                <div class="progress-eta">
+                                    <span>{{ 'Осталось:' if lang == 'ru' else 'ETA:' }}</span>
+                                    <span class="progress-eta-value">--:--</span>
+                                </div>
+                            </div>
+                        </div>
                         </div>
                         <div class="form-group">
                             <label for="zip-model-name" class="label">{{ i18n.model_name }}</label>
@@ -367,12 +511,6 @@
 
 
 
-        <!-- Индикатор загрузки -->
-        <div id="loading" class="loading hidden">
-            <div class="loading-spinner"></div>
-            <p class="loading-text" id="loading-text">{{ i18n.processing }}</p>
-        </div>
-
         <!-- Уведомления -->
         <div id="notifications" class="notifications"></div>
     </div>
@@ -382,7 +520,7 @@
         window.i18n = JSON.parse('{{ i18n | tojson | safe }}');
         window.currentLang = '{{ lang }}';
     </script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script src="{{ url_for('static', filename='audio-player.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/audio-player.js') }}"></script>
 </body>
 </html>

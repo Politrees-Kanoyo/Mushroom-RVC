@@ -33,6 +33,28 @@ def display_progress(percent, message, is_print, progress=gr.Progress()):
     if is_print:
         print(message)
     progress(percent, desc=message)
+    
+    # Обновляем глобальный прогресс для веб-интерфейса
+    try:
+        import sys
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+        from web.api import current_conversion_progress
+        
+        # Вычисляем текущий шаг на основе процента (всего 8 шагов в rvc_infer)
+        total_steps = 8
+        current_step = min(int(percent * total_steps), total_steps)
+        
+        # Обновляем прогресс для веб-интерфейса
+        current_conversion_progress.update({
+            'progress': percent,
+            'current_step': current_step,
+            'total_steps': total_steps,
+            'step_name': 'RVC Inference',
+            'description': message
+        })
+    except ImportError:
+        # Если не удается импортировать, просто продолжаем без обновления веб-прогресса
+        pass
 
 
 # Загружает модель RVC и индекс по имени модели.
@@ -146,6 +168,22 @@ def rvc_infer(
     if not os.path.exists(input_path):
         raise ValueError(f"Не удалось найти файл '{input_path}'. Убедитесь, что он загрузился или проверьте правильность пути к нему.")
 
+    # Инициализируем прогресс для веб-интерфейса
+    try:
+        import sys
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+        from web.api import current_conversion_progress
+        
+        current_conversion_progress.update({
+            'progress': 0.0,
+            'current_step': 0,
+            'total_steps': 8,
+            'step_name': 'RVC Inference',
+            'description': 'Начинаем конвертацию голоса'
+        })
+    except ImportError:
+        pass
+
     display_progress(0, "\n[⚙️] Запуск конвейера генерации...", True)
 
     # Загружаем модель Hubert
@@ -233,7 +271,23 @@ def rvc_edgetts_infer(
     if not tts_voice:
         raise ValueError("Выберите язык и голос для синтеза речи.")
 
-    display_progress(1.0, "[🎙️] Синтезируем речь...", False)
+    # Инициализируем прогресс для веб-интерфейса
+    try:
+        import sys
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+        from web.api import current_conversion_progress
+        
+        current_conversion_progress.update({
+            'progress': 0.0,
+            'current_step': 0,
+            'total_steps': 9,  # 1 шаг TTS + 8 шагов RVC
+            'step_name': 'TTS + RVC Inference',
+            'description': 'Начинаем синтез речи и конвертацию голоса'
+        })
+    except ImportError:
+        pass
+
+    display_progress(0.1, "[🎙️] Синтезируем речь...", False)
     input_path = os.path.join(OUTPUT_DIR, "TTS_Voice.wav")
     asyncio.run(text_to_speech(tts_voice, tts_text, tts_rate, tts_volume, tts_pitch, input_path))
 

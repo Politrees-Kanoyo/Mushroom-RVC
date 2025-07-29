@@ -1,11 +1,19 @@
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* ========================================
+   CSS CUSTOM PROPERTIES (DESIGN TOKENS)
+   ======================================== */
+
 :root {
-    /* Цветовая палитра */
+    /* Color Palette */
     --primary-color: #6366f1;
     --primary-hover: #5855eb;
     --secondary-color: #64748b;
@@ -13,7 +21,7 @@
     --error-color: #ef4444;
     --warning-color: #f59e0b;
     
-    /* Нейтральные цвета */
+    /* Neutral Colors */
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
     --bg-tertiary: #f1f5f9;
@@ -22,18 +30,18 @@
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
     
-    /* Тени */
+    /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     
-    /* Радиусы */
+    /* Border Radius */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
     
-    /* Отступы */
+    /* Spacing Scale */
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
     --spacing-md: 1rem;
@@ -41,7 +49,7 @@
     --spacing-xl: 2rem;
     --spacing-2xl: 3rem;
     
-    /* Шрифты */
+    /* Typography */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
@@ -50,9 +58,23 @@
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;
     --font-size-3xl: 1.875rem;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    
+    /* Z-Index Scale */
+    --z-dropdown: 1000;
+    --z-modal: 1001;
+    --z-tooltip: 1002;
 }
 
-/* Темная тема */
+/* ========================================
+   THEME VARIATIONS
+   ======================================== */
+
+/* Dark Theme */
 @media (prefers-color-scheme: dark) {
     :root {
         --bg-primary: #0f172a;
@@ -65,7 +87,10 @@
     }
 }
 
-/* Базовые стили */
+/* ========================================
+   BASE STYLES
+   ======================================== */
+
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
@@ -75,14 +100,18 @@ body {
     min-height: 100vh;
 }
 
-/* Контейнер */
+/* ========================================
+   LAYOUT COMPONENTS
+   ======================================== */
+
+/* Container */
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: var(--spacing-lg);
 }
 
-/* Заголовок */
+/* Header */
 .header {
     text-align: center;
     margin-bottom: var(--spacing-2xl);
@@ -102,53 +131,48 @@ body {
     font-weight: 300;
 }
 
-/* Переключатель языка */
+/* ========================================
+   NAVIGATION COMPONENTS
+   ======================================== */
+
+/* Language Switcher */
 .language-switcher {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
-    display: flex;
-    gap: 0.5rem;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: var(--z-dropdown);
 }
 
-.lang-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 0.5rem;
+.language-dropdown {
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
     cursor: pointer;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
-    min-width: 2.5rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transition: background-color var(--transition-base);
+    min-width: 120px;
+    list-style: none;
 }
 
-.lang-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-2px);
+.language-dropdown:hover {
+    background: var(--bg-tertiary);
 }
 
-.lang-btn.active {
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--primary-color);
-    border-color: white;
-    font-weight: bold;
+.language-dropdown:focus {
+    outline: none;
+    background: var(--bg-tertiary);
 }
 
-@media (max-width: 768px) {
-    .language-switcher {
-        position: static;
-        justify-content: center;
-        margin-top: 1rem;
-    }
+.language-dropdown option {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: var(--spacing-sm);
 }
 
-/* Навигация */
+/* Main Navigation */
 .nav {
     display: flex;
     gap: var(--spacing-xs);
@@ -170,7 +194,7 @@ body {
     font-weight: 500;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,7 +218,11 @@ body {
     flex-shrink: 0;
 }
 
-/* Вкладки */
+/* ========================================
+   CONTENT COMPONENTS
+   ======================================== */
+
+/* Tab System */
 .tab-content {
     display: none;
 }
@@ -203,7 +231,7 @@ body {
     display: block;
 }
 
-/* Карточки */
+/* Card Components */
 .card {
     background: var(--bg-primary);
     border-radius: var(--radius-xl);
@@ -220,7 +248,11 @@ body {
     margin-bottom: var(--spacing-lg);
 }
 
-/* Формы */
+/* ========================================
+   FORM COMPONENTS
+   ======================================== */
+
+/* Form Layout */
 .form {
     display: flex;
     flex-direction: column;
@@ -245,7 +277,7 @@ body {
     color: var(--text-primary);
 }
 
-/* Поля ввода */
+/* Input Elements */
 .input,
 .select,
 .textarea {
@@ -255,7 +287,7 @@ body {
     font-size: var(--font-size-base);
     background: var(--bg-primary);
     color: var(--text-primary);
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
 }
 
 .input:focus,
@@ -271,7 +303,11 @@ body {
     resize: vertical;
 }
 
-/* Слайдеры */
+/* ========================================
+   INTERACTIVE COMPONENTS
+   ======================================== */
+
+/* Range Sliders */
 .slider {
     -webkit-appearance: none;
     appearance: none;
@@ -303,7 +339,7 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
-/* Загрузка файлов */
+/* File Upload Components */
 .file-input-wrapper {
     position: relative;
 }
@@ -325,7 +361,8 @@ body {
     border-radius: var(--radius-md);
     background: var(--bg-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
+    position: relative;
 }
 
 .file-label:hover {
@@ -345,7 +382,38 @@ body {
     color: var(--text-secondary);
 }
 
-/* Чекбоксы */
+.remove-file-btn {
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.remove-file-btn:hover {
+    background: var(--primary-hover);
+    transform: scale(1.1);
+}
+
+.remove-file-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.remove-file-btn.hidden {
+    display: none;
+}
+
+/* Checkbox Components */
 .checkbox-group {
     display: flex;
     gap: var(--spacing-lg);
@@ -372,7 +440,7 @@ body {
     border: 2px solid var(--border-color);
     border-radius: var(--radius-sm);
     background: var(--bg-primary);
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     position: relative;
 }
 
@@ -392,7 +460,7 @@ body {
     font-weight: bold;
 }
 
-/* Детали (раскрывающиеся секции) */
+/* Collapsible Details */
 .details {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -406,7 +474,7 @@ body {
     font-weight: 500;
     color: var(--text-primary);
     list-style: none;
-    transition: background-color 0.2s ease;
+    transition: background-color var(--transition-base);
 }
 
 .details-summary:hover {
@@ -420,7 +488,7 @@ body {
 .details-summary::after {
     content: '▼';
     float: right;
-    transition: transform 0.2s ease;
+    transition: transform var(--transition-base);
 }
 
 .details[open] .details-summary::after {
@@ -435,7 +503,11 @@ body {
     gap: var(--spacing-lg);
 }
 
-/* Кнопки */
+/* ========================================
+   BUTTON COMPONENTS
+   ======================================== */
+
+/* Base Button Styles */
 .btn {
     padding: var(--spacing-md) var(--spacing-xl);
     border: none;
@@ -443,7 +515,7 @@ body {
     font-size: var(--font-size-base);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     text-align: center;
     text-decoration: none;
     display: inline-flex;
@@ -458,6 +530,7 @@ body {
     flex-shrink: 0;
 }
 
+/* Button Variants */
 .btn-primary {
     background: var(--primary-color);
     color: white;
@@ -485,10 +558,10 @@ body {
     cursor: not-allowed;
 }
 
-/* Контейнер для селектора с кнопкой обновления */
+/* Specialized Button Components */
 .select-with-refresh {
     display: flex;
-    gap: 8px;
+    gap: var(--spacing-sm);
     align-items: center;
 }
 
@@ -501,12 +574,12 @@ body {
     height: 48px;
     background: var(--primary-color);
     border: 1px solid var(--primary-color);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     flex-shrink: 0;
     color: white;
 }
@@ -527,7 +600,7 @@ body {
 .refresh-btn .refresh-icon {
     width: 18px;
     height: 18px;
-    transition: transform 0.3s ease;
+    transition: transform var(--transition-slow);
 }
 
 .refresh-btn:disabled {
@@ -544,7 +617,26 @@ body {
     color: white;
 }
 
-/* Секции моделей */
+/* Audio Control Components */
+.audio-input-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.audio-input-controls .btn {
+    flex: 1;
+    min-width: 120px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+}
+
+/* ========================================
+   SPECIALIZED SECTIONS
+   ======================================== */
+
+/* Model Sections */
 .model-section {
     padding: var(--spacing-lg);
     border: 1px solid var(--border-color);
@@ -560,7 +652,7 @@ body {
     margin-bottom: var(--spacing-lg);
 }
 
-/* Область результатов */
+/* Result Areas */
 .result-area {
     margin-top: var(--spacing-xl);
 }
@@ -572,47 +664,16 @@ body {
     border: 1px solid var(--border-color);
 }
 
-/* Загрузка */
-.loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
+/* ========================================
+   UI FEEDBACK COMPONENTS
+   ======================================== */
 
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--bg-tertiary);
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-.loading-text {
-    color: white;
-    margin-top: var(--spacing-md);
-    font-size: var(--font-size-lg);
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Уведомления */
+/* Notification System */
 .notifications {
     position: fixed;
     top: var(--spacing-lg);
     right: var(--spacing-lg);
-    z-index: 1001;
+    z-index: var(--z-modal);
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
@@ -624,7 +685,7 @@ body {
     color: white;
     font-weight: 500;
     box-shadow: var(--shadow-lg);
-    animation: slideIn 0.3s ease;
+    animation: slideIn var(--transition-slow) ease;
     max-width: 400px;
 }
 
@@ -651,11 +712,221 @@ body {
     }
 }
 
-/* Утилиты */
+/* Progress Components */
+.upload-progress {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-slow);
+}
+
+.upload-progress.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    border-radius: var(--radius-md);
+    transition: width var(--transition-slow);
+    width: 0%;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+.progress-fill.processing {
+    background: linear-gradient(90deg, var(--warning-color), #f97316);
+}
+
+.progress-fill.complete {
+    background: linear-gradient(90deg, var(--success-color), #059669);
+}
+
+.progress-fill.error {
+    background: linear-gradient(90deg, var(--error-color), #dc2626);
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.progress-percentage {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: var(--font-size-base);
+}
+
+.progress-status {
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.progress-status.processing {
+    color: var(--warning-color);
+}
+
+.progress-status.complete {
+    color: var(--success-color);
+}
+
+.progress-status.error {
+    color: var(--error-color);
+}
+
+.progress-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: var(--spacing-xs);
+}
+
+.progress-speed {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.progress-eta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.progress-file-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-xs);
+    padding: var(--spacing-xs) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.progress-file-name {
+    font-weight: 500;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.progress-file-size {
+    font-weight: 400;
+}
+
+/* Анимация для прогресс-бара */
+.upload-progress.active .progress-fill {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Индикатор загрузки */
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Кнопка отмены загрузки */
+.progress-cancel {
+    background: none;
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: var(--spacing-sm);
+}
+
+.progress-cancel:hover {
+    background: var(--error-color);
+    color: white;
+}
+
+.progress-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Display Utilities */
 .hidden {
     display: none !important;
 }
 
+/* Text Utilities */
 .text-center {
     text-align: center;
 }
@@ -664,7 +935,48 @@ body {
     color: var(--text-muted);
 }
 
-/* Адаптивность */
+/* Spacing Utilities */
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+.mt-5 { margin-top: var(--spacing-xl); }
+
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+.mb-5 { margin-bottom: var(--spacing-xl); }
+
+.p-1 { padding: var(--spacing-xs); }
+.p-2 { padding: var(--spacing-sm); }
+.p-3 { padding: var(--spacing-md); }
+.p-4 { padding: var(--spacing-lg); }
+.p-5 { padding: var(--spacing-xl); }
+
+/* Size Utilities */
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+/* Flexbox Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+
+/* Border Utilities */
+.rounded { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+
+/* Shadow Utilities */
+.shadow { box-shadow: var(--shadow-sm); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
 @media (max-width: 768px) {
     .container {
         padding: var(--spacing-md);

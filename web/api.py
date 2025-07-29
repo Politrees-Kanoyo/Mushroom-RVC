@@ -3,9 +3,22 @@
 import asyncio
 import os
 import sys
+import gc
+import tempfile
+import shutil
 from typing import Optional, Tuple, Dict, Any, List
+from contextlib import contextmanager
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Глобальная переменная для отслеживания прогресса конвертации
+current_conversion_progress = {
+    'progress': 0.0,
+    'current_step': 0,
+    'total_steps': 8,
+    'step_name': 'Ожидание',
+    'description': 'Ожидание начала конвертации'
+}
 
 from rvc.infer.infer import (
     rvc_infer as _rvc_infer,
@@ -37,6 +50,34 @@ from web.gradio.components.modules import (
     OUTPUT_FORMAT
 )
 
+@contextmanager
+def memory_cleanup():
+    """Контекстный менеджер для очистки памяти после операций"""
+    try:
+        yield
+    finally:
+        gc.collect()
+
+def validate_file_exists(file_path: str) -> bool:
+    """Проверка существования файла"""
+    return os.path.exists(file_path) and os.path.isfile(file_path)
+
+def get_file_size_mb(file_path: str) -> float:
+    """Получение размера файла в мегабайтах"""
+    if not validate_file_exists(file_path):
+        return 0.0
+    return os.path.getsize(file_path) / (1024 * 1024)
+
+def safe_remove_file(file_path: str) -> bool:
+    """Безопасное удаление файла"""
+    try:
+        if validate_file_exists(file_path):
+            os.remove(file_path)
+            return True
+    except Exception as e:
+        print(f"[WARNING] Не удалось удалить файл {file_path}: {e}")
+    return False
+
 
 class MushroomRVCAPI: 
     def __init__(self):
@@ -61,27 +102,93 @@ class MushroomRVCAPI:
         output_format: str = "wav"
     ) -> str:
         try:
-            class DummyProgress:
-                def __call__(self, *args, **kwargs):
-                    pass
+            # Инициализируем прогресс в начале конвертации
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 10,
+                'step_name': 'Инициализация',
+                'description': 'Начинаем конвертацию голоса'
+            }
             
-            result = _rvc_infer(
-                rvc_model=rvc_model,
-                input_path=input_path,
-                f0_method=f0_method,
-                f0_min=f0_min,
-                f0_max=f0_max,
-                rvc_pitch=rvc_pitch,
-                protect=protect,
-                index_rate=index_rate,
-                volume_envelope=volume_envelope,
-                autopitch=autopitch,
-                autopitch_threshold=autopitch_threshold,
-                autotune=autotune,
-                autotune_strength=autotune_strength,
-                output_format=output_format,
-                progress=DummyProgress()
-            )
+            # Проверка существования входного файла
+            if not validate_file_exists(input_path):
+                raise Exception(f"Входной файл не найден: {input_path}")
+            
+            # Проверка размера файла
+            file_size = get_file_size_mb(input_path)
+            if file_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер файла ({file_size:.1f} MB) превышает лимит 500 MB")
+            
+            class ProgressTracker:
+                def __init__(self):
+                    self.total_steps = 10  # Общее количество основных этапов
+                    self.step_mapping = {
+                        0.0: (0, "Инициализация", "Запуск конвейера генерации"),
+                        0.1: (1, "Загрузка Hubert", "Загружаем модель Hubert"),
+                        0.2: (2, "Загрузка RVC", "Загружаем модель RVC и индекс"),
+                        0.3: (3, "Конвертер голоса", "Получаем конвертер голоса"),
+                        0.4: (4, "Загрузка аудио", "Загружаем аудиофайл"),
+                        0.5: (5, "Преобразование", "Преобразование аудио"),
+                        0.8: (8, "Сохранение", "Сохраняем результат"),
+                        0.9: (9, "Очистка памяти", "Освобождаем память"),
+                        1.0: (10, "Завершено", "Преобразование завершено")
+                    }
+                    
+                def __call__(self, progress_value, desc=None):
+                    # Находим ближайший этап по значению прогресса
+                    current_step = 0
+                    step_name = "Обработка"
+                    description = desc or "Выполняется обработка"
+                    
+                    # Определяем текущий шаг на основе прогресса
+                    for threshold, (step, name, default_desc) in self.step_mapping.items():
+                        if progress_value >= threshold:
+                            current_step = step
+                            step_name = name
+                            if not desc:  # Используем описание по умолчанию, если не передано
+                                description = default_desc
+                    
+                    # Для промежуточных значений интерполируем шаг
+                    if 0.5 < progress_value < 0.8:
+                        # Во время основной обработки показываем прогресс более детально
+                        interpolated_step = 5 + int((progress_value - 0.5) / 0.3 * 3)
+                        current_step = min(interpolated_step, 7)
+                        step_name = "Преобразование"
+                        if not desc:
+                            description = f"Преобразование аудио ({int(progress_value * 100)}%)"
+                        
+                    # Сохраняем прогресс в глобальную переменную для доступа из веб-интерфейса
+                    global current_conversion_progress
+                    current_conversion_progress = {
+                        'progress': progress_value,
+                        'current_step': current_step,
+                        'total_steps': self.total_steps,
+                        'step_name': step_name,
+                        'description': description
+                    }
+            
+            progress_tracker = ProgressTracker()
+            
+            with memory_cleanup():
+                result = _rvc_infer(
+                    rvc_model=rvc_model,
+                    input_path=input_path,
+                    f0_method=f0_method,
+                    f0_min=f0_min,
+                    f0_max=f0_max,
+                    rvc_pitch=rvc_pitch,
+                    protect=protect,
+                    index_rate=index_rate,
+                    volume_envelope=volume_envelope,
+                    autopitch=autopitch,
+                    autopitch_threshold=autopitch_threshold,
+                    autotune=autotune,
+                    autotune_strength=autotune_strength,
+                    output_format=output_format,
+                    progress=progress_tracker
+                )
             
             return result
             
@@ -110,31 +217,92 @@ class MushroomRVCAPI:
         tts_pitch: int = 0
     ) -> Tuple[str, str]:
         try:
-            class DummyProgress:
-                def __call__(self, *args, **kwargs):
-                    pass
+            # Инициализируем прогресс в начале TTS конвертации
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 12,
+                'step_name': 'Инициализация TTS',
+                'description': 'Начинаем синтез и конвертацию речи'
+            }
             
-            synth_path, converted_path = _rvc_edgetts_infer(
-                rvc_model=rvc_model,
-                f0_method=f0_method,
-                f0_min=f0_min,
-                f0_max=f0_max,
-                rvc_pitch=rvc_pitch,
-                protect=protect,
-                index_rate=index_rate,
-                volume_envelope=volume_envelope,
-                autopitch=autopitch,
-                autopitch_threshold=autopitch_threshold,
-                autotune=autotune,
-                autotune_strength=autotune_strength,
-                output_format=output_format,
-                tts_voice=tts_voice,
-                tts_text=tts_text,
-                tts_rate=tts_rate,
-                tts_volume=tts_volume,
-                tts_pitch=tts_pitch,
-                progress=DummyProgress()
-            )
+            # Проверка длины текста
+            if len(tts_text) > 10000:  # Лимит на длину текста
+                raise Exception(f"Текст слишком длинный ({len(tts_text)} символов). Максимум: 10000 символов")
+            
+            class TTSProgressTracker:
+                def __init__(self):
+                    self.total_steps = 12  # TTS + RVC этапы
+                    self.step_mapping = {
+                        0.0: (0, "Инициализация TTS", "Подготовка к синтезу речи"),
+                        0.05: (1, "Синтез речи", "Синтезируем речь из текста"),
+                        0.1: (2, "Загрузка Hubert", "Загружаем модель Hubert"),
+                        0.2: (3, "Загрузка RVC", "Загружаем модель RVC и индекс"),
+                        0.3: (4, "Конвертер голоса", "Получаем конвертер голоса"),
+                        0.4: (5, "Загрузка аудио", "Загружаем синтезированный аудиофайл"),
+                        0.5: (6, "Преобразование", "Преобразование голоса"),
+                        0.8: (9, "Сохранение", "Сохраняем результат"),
+                        0.9: (10, "Очистка памяти", "Освобождаем память"),
+                        1.0: (12, "Завершено", "TTS преобразование завершено")
+                    }
+                    
+                def __call__(self, progress_value, desc=None):
+                    # Находим ближайший этап по значению прогресса
+                    current_step = 0
+                    step_name = "TTS Обработка"
+                    description = desc or "Выполняется TTS обработка"
+                    
+                    # Определяем текущий шаг на основе прогресса
+                    for threshold, (step, name, default_desc) in self.step_mapping.items():
+                        if progress_value >= threshold:
+                            current_step = step
+                            step_name = name
+                            if not desc:
+                                description = default_desc
+                    
+                    # Для промежуточных значений интерполируем шаг
+                    if 0.5 < progress_value < 0.8:
+                        interpolated_step = 6 + int((progress_value - 0.5) / 0.3 * 3)
+                        current_step = min(interpolated_step, 8)
+                        step_name = "Преобразование"
+                        if not desc:
+                            description = f"Преобразование голоса ({int(progress_value * 100)}%)"
+                        
+                    # Сохраняем прогресс в глобальную переменную для доступа из веб-интерфейса
+                    global current_conversion_progress
+                    current_conversion_progress = {
+                        'progress': progress_value,
+                        'current_step': current_step,
+                        'total_steps': self.total_steps,
+                        'step_name': step_name,
+                        'description': description
+                    }
+            
+            tts_progress_tracker = TTSProgressTracker()
+            
+            with memory_cleanup():
+                synth_path, converted_path = _rvc_edgetts_infer(
+                    rvc_model=rvc_model,
+                    f0_method=f0_method,
+                    f0_min=f0_min,
+                    f0_max=f0_max,
+                    rvc_pitch=rvc_pitch,
+                    protect=protect,
+                    index_rate=index_rate,
+                    volume_envelope=volume_envelope,
+                    autopitch=autopitch,
+                    autopitch_threshold=autopitch_threshold,
+                    autotune=autotune,
+                    autotune_strength=autotune_strength,
+                    output_format=output_format,
+                    tts_voice=tts_voice,
+                    tts_text=tts_text,
+                    tts_rate=tts_rate,
+                    tts_volume=tts_volume,
+                    tts_pitch=tts_pitch,
+                    progress=tts_progress_tracker
+                )
             
             return synth_path, converted_path
             
@@ -147,11 +315,37 @@ class MushroomRVCAPI:
         model_name: str
     ) -> str:
         try:
-            class DummyProgress:
-                def __call__(self, *args, **kwargs):
-                    pass
+            # Инициализируем прогресс в начале загрузки модели
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 5,
+                'step_name': 'Инициализация',
+                'description': 'Начинаем загрузку модели'
+            }
             
-            return _download_from_url(url, model_name, DummyProgress())
+            class DownloadProgressTracker:
+                def __init__(self):
+                    self.total_steps = 5
+                    
+                def __call__(self, progress_value, desc=None):
+                    # Простой прогресс для загрузки
+                    current_step = min(int(progress_value * self.total_steps), self.total_steps)
+                    step_name = "Загрузка модели"
+                    description = desc or f"Загружаем модель ({int(progress_value * 100)}%)"
+                    
+                    global current_conversion_progress
+                    current_conversion_progress = {
+                        'progress': progress_value,
+                        'current_step': current_step,
+                        'total_steps': self.total_steps,
+                        'step_name': step_name,
+                        'description': description
+                    }
+            
+            download_progress_tracker = DownloadProgressTracker()
+            return _download_from_url(url, model_name, download_progress_tracker)
         except Exception as e:
             raise Exception(f"Ошибка при загрузке модели: {str(e)}")
     
@@ -161,20 +355,61 @@ class MushroomRVCAPI:
         model_name: str
     ) -> str:
         try:
+            # Инициализируем прогресс в начале загрузки ZIP модели
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 6,
+                'step_name': 'Инициализация',
+                'description': 'Начинаем установку модели из ZIP'
+            }
+            
+            # Проверка существования ZIP файла
+            if not validate_file_exists(zip_path):
+                raise Exception(f"ZIP файл не найден: {zip_path}")
+            
+            # Проверка размера файла
+            file_size = get_file_size_mb(zip_path)
+            if file_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер ZIP файла ({file_size:.1f} MB) превышает лимит 500 MB")
+            
+            # Проверка расширения файла
+            if not zip_path.lower().endswith('.zip'):
+                raise Exception("Файл должен иметь расширение .zip")
+            
             try:
                 from gradio import Error as GradioError
             except ImportError:
                 GradioError = Exception
 
-            class DummyProgress:
-                def __call__(self, *args, **kwargs):
-                    pass
+            class UploadProgressTracker:
+                def __init__(self):
+                    self.total_steps = 6
+                    
+                def __call__(self, progress_value, desc=None):
+                    # Прогресс для загрузки ZIP
+                    current_step = min(int(progress_value * self.total_steps), self.total_steps)
+                    step_name = "Установка модели"
+                    description = desc or f"Устанавливаем модель из ZIP ({int(progress_value * 100)}%)"
+                    
+                    global current_conversion_progress
+                    current_conversion_progress = {
+                        'progress': progress_value,
+                        'current_step': current_step,
+                        'total_steps': self.total_steps,
+                        'step_name': step_name,
+                        'description': description
+                    }
+            
+            upload_progress_tracker = UploadProgressTracker()
             
             class FileWrapper:
                 def __init__(self, path):
                     self.name = path
             
-            result = _upload_zip_file(FileWrapper(zip_path), model_name, DummyProgress())
+            with memory_cleanup():
+                result = _upload_zip_file(FileWrapper(zip_path), model_name, upload_progress_tracker)
             
             return result
 
@@ -191,6 +426,41 @@ class MushroomRVCAPI:
         model_name: str
     ) -> str:
         try:
+            # Инициализируем прогресс в начале загрузки файлов модели
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 4,
+                'step_name': 'Инициализация',
+                'description': 'Начинаем загрузку файлов модели'
+            }
+            
+            # Проверка существования PTH файла
+            if not validate_file_exists(pth_path):
+                raise Exception(f"PTH файл не найден: {pth_path}")
+            
+            # Проверка размера PTH файла
+            pth_size = get_file_size_mb(pth_path)
+            if pth_size > 500:  # 500 MB лимит
+                raise Exception(f"Размер PTH файла ({pth_size:.1f} MB) превышает лимит 500 MB")
+            
+            # Проверка расширения PTH файла
+            if not pth_path.lower().endswith('.pth'):
+                raise Exception("PTH файл должен иметь расширение .pth")
+            
+            # Проверка INDEX файла (если предоставлен)
+            if index_path:
+                if not validate_file_exists(index_path):
+                    raise Exception(f"INDEX файл не найден: {index_path}")
+                
+                index_size = get_file_size_mb(index_path)
+                if index_size > 100:  # 100 MB лимит для index файлов
+                    raise Exception(f"Размер INDEX файла ({index_size:.1f} MB) превышает лимит 100 MB")
+                
+                if not index_path.lower().endswith('.index'):
+                    raise Exception("INDEX файл должен иметь расширение .index")
+            
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
@@ -202,7 +472,10 @@ class MushroomRVCAPI:
             pth_file = FileWrapper(pth_path)
             index_file = FileWrapper(index_path) if index_path else None
             
-            return _upload_separate_files(pth_file, index_file, model_name, DummyProgress())
+            with memory_cleanup():
+                result = _upload_separate_files(pth_file, index_file, model_name, DummyProgress())
+            
+            return result
         except Exception as e:
             raise Exception(f"Ошибка при загрузке файлов модели: {str(e)}")
     
@@ -212,6 +485,16 @@ class MushroomRVCAPI:
         custom_url: Optional[str] = None
     ) -> str:
         try:
+            # Инициализируем прогресс в начале установки HuBERT модели
+            global current_conversion_progress
+            current_conversion_progress = {
+                'progress': 0.0,
+                'current_step': 0,
+                'total_steps': 3,
+                'step_name': 'Инициализация',
+                'description': 'Начинаем установку HuBERT модели'
+            }
+            
             class DummyProgress:
                 def __call__(self, *args, **kwargs):
                     pass
